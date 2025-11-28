@@ -11,6 +11,7 @@ Hold a hotkey (default: ScrollLock) while speaking, release to transcribe and ou
 - **Fallback chain** - Types via ydotool, falls back to clipboard if unavailable
 - **Push-to-talk** - Natural workflow: hold to record, release to transcribe
 - **Configurable** - Choose your hotkey, model size, output mode, and more
+- **Waybar integration** - Optional status indicator shows recording state in your bar
 
 ## Quick Start
 

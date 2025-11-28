@@ -10,6 +10,7 @@ use crate::hotkey::{self, HotkeyEvent};
 use crate::output;
 use crate::state::State;
 use crate::transcribe;
+use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
@@ -30,15 +31,53 @@ async fn send_notification(title: &str, body: &str) {
         .await;
 }
 
+/// Write state to file for external integrations (e.g., Waybar)
+fn write_state_file(path: &PathBuf, state: &str) {
+    // Ensure parent directory exists
+    if let Some(parent) = path.parent() {
+        if let Err(e) = std::fs::create_dir_all(parent) {
+            tracing::warn!("Failed to create state file directory: {}", e);
+            return;
+        }
+    }
+
+    if let Err(e) = std::fs::write(path, state) {
+        tracing::warn!("Failed to write state file: {}", e);
+    } else {
+        tracing::trace!("State file updated: {}", state);
+    }
+}
+
+/// Remove state file on shutdown
+fn cleanup_state_file(path: &PathBuf) {
+    if path.exists() {
+        if let Err(e) = std::fs::remove_file(path) {
+            tracing::warn!("Failed to remove state file: {}", e);
+        }
+    }
+}
+
 /// Main daemon that orchestrates all components
 pub struct Daemon {
     config: Config,
+    state_file_path: Option<PathBuf>,
 }
 
 impl Daemon {
     /// Create a new daemon with the given configuration
     pub fn new(config: Config) -> Self {
-        Self { config }
+        let state_file_path = config.resolve_state_file();
+        Self {
+            config,
+            state_file_path,
+        }
+    }
+
+    /// Update the state file if configured
+    fn update_state(&self, state_name: &str) {
+        if let Some(ref path) = self.state_file_path {
+            write_state_file(path, state_name);
+        }
     }
 
     /// Run the daemon main loop
@@ -52,6 +91,11 @@ impl Daemon {
 
         tracing::info!("Hotkey: {}", self.config.hotkey.key);
         tracing::info!("Output mode: {:?}", self.config.output.mode);
+
+        // Log state file if configured
+        if let Some(ref path) = self.state_file_path {
+            tracing::info!("State file: {:?}", path);
+        }
 
         // Initialize hotkey listener
         let mut hotkey_listener = hotkey::create_listener(&self.config.hotkey)?;
@@ -89,6 +133,9 @@ impl Daemon {
             self.config.hotkey.key
         );
 
+        // Write initial state
+        self.update_state("idle");
+
         // Main event loop
         loop {
             tokio::select! {
@@ -119,6 +166,7 @@ impl Daemon {
                                         state = State::Recording {
                                             started_at: std::time::Instant::now(),
                                         };
+                                        self.update_state("recording");
                                     }
                                     Err(e) => {
                                         tracing::error!("Failed to create audio capture: {}", e);
@@ -154,6 +202,7 @@ impl Daemon {
                                                     audio_duration
                                                 );
                                                 state = State::Idle;
+                                                self.update_state("idle");
                                                 continue;
                                             }
                                             
@@ -162,6 +211,7 @@ impl Daemon {
                                                 audio_duration
                                             );
                                             state = State::Transcribing { audio: samples.clone() };
+                                            self.update_state("transcribing");
                                             
                                             // Run transcription in blocking task
                                             let transcriber = transcriber.clone();
@@ -175,45 +225,51 @@ impl Daemon {
                                                     if text.is_empty() {
                                                         tracing::debug!("Transcription was empty");
                                                         state = State::Idle;
+                                                        self.update_state("idle");
                                                     } else {
                                                         tracing::info!("Transcribed: {:?}", text);
-                                                        
+
                                                         // Output the text
                                                         state = State::Outputting { text: text.clone() };
-                                                        
+
                                                         if let Err(e) = output::output_with_fallback(
                                                             &output_chain,
                                                             &text
                                                         ).await {
                                                             tracing::error!("Output failed: {}", e);
                                                         }
-                                                        
+
                                                         state = State::Idle;
+                                                        self.update_state("idle");
                                                     }
                                                 }
                                                 Ok(Err(e)) => {
                                                     tracing::error!("Transcription failed: {}", e);
                                                     state = State::Idle;
+                                                    self.update_state("idle");
                                                 }
                                                 Err(e) => {
                                                     tracing::error!("Transcription task failed: {}", e);
                                                     state = State::Idle;
+                                                    self.update_state("idle");
                                                 }
                                             }
                                         }
                                         Err(e) => {
                                             tracing::warn!("Recording error: {}", e);
                                             state = State::Idle;
+                                            self.update_state("idle");
                                         }
                                     }
                                 } else {
                                     state = State::Idle;
+                                    self.update_state("idle");
                                 }
                             }
                         }
                     }
                 }
-                
+
                 // Check for recording timeout
                 _ = tokio::time::sleep(Duration::from_millis(100)), if state.is_recording() => {
                     if let Some(duration) = state.recording_duration() {
@@ -222,12 +278,13 @@ impl Daemon {
                                 "Recording timeout ({:.0}s limit), stopping",
                                 max_duration.as_secs_f32()
                             );
-                            
+
                             // Stop recording
                             if let Some(mut capture) = audio_capture.take() {
                                 let _ = capture.stop().await;
                             }
                             state = State::Idle;
+                            self.update_state("idle");
                         }
                     }
                 }
@@ -242,6 +299,12 @@ impl Daemon {
 
         // Cleanup
         hotkey_listener.stop().await?;
+
+        // Remove state file on shutdown
+        if let Some(ref path) = self.state_file_path {
+            cleanup_state_file(path);
+        }
+
         tracing::info!("Daemon stopped");
 
         Ok(())

@@ -17,6 +17,13 @@ pub struct Config {
     pub audio: AudioConfig,
     pub whisper: WhisperConfig,
     pub output: OutputConfig,
+
+    /// Optional path to state file for external integrations (e.g., Waybar)
+    /// When set, the daemon writes current state ("idle", "recording", "transcribing")
+    /// to this file whenever state changes.
+    /// Example: "/run/user/1000/voxtype/state" or use "auto" for default location
+    #[serde(default)]
+    pub state_file: Option<String>,
 }
 
 /// Hotkey detection configuration
@@ -146,6 +153,7 @@ impl Default for Config {
                 notification: NotificationConfig::default(),
                 type_delay_ms: 0,
             },
+            state_file: None,
         }
     }
 }
@@ -155,6 +163,28 @@ impl Config {
     pub fn default_path() -> Option<PathBuf> {
         directories::ProjectDirs::from("", "", "voxtype")
             .map(|dirs| dirs.config_dir().join("config.toml"))
+    }
+
+    /// Get the runtime directory for ephemeral files (state, sockets)
+    pub fn runtime_dir() -> PathBuf {
+        // Use XDG_RUNTIME_DIR if available, otherwise fall back to /tmp
+        std::env::var("XDG_RUNTIME_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from("/tmp"))
+            .join("voxtype")
+    }
+
+    /// Resolve the state file path from config
+    /// Returns None if state_file is not configured
+    /// Returns the resolved path if set to "auto" or an explicit path
+    pub fn resolve_state_file(&self) -> Option<PathBuf> {
+        self.state_file.as_ref().map(|path| {
+            if path == "auto" {
+                Self::runtime_dir().join("state")
+            } else {
+                PathBuf::from(path)
+            }
+        })
     }
 
     /// Get the config directory path

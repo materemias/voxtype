@@ -452,6 +452,99 @@ exec-once = voxtype
 
 Enable the systemd service, or add Voxtype to Startup Applications.
 
+### With Waybar (Status Indicator)
+
+Voxtype can display a status indicator in Waybar showing when push-to-talk is active.
+
+**Why enable this?** A Waybar widget provides visual feedback when:
+- Recording is active (microphone icon lights up)
+- Transcription is in progress
+- Voxtype is running and ready
+
+This is useful if you disable desktop notifications or prefer a more subtle indicator.
+
+**Step 1: Enable the state file**
+
+Add to your `~/.config/voxtype/config.toml`:
+
+```toml
+# Enable state file for Waybar integration
+state_file = "auto"
+```
+
+This tells the daemon to write its current state to `$XDG_RUNTIME_DIR/voxtype/state`.
+
+**Step 2: Add Waybar module**
+
+Add to your Waybar config (`~/.config/waybar/config` or `config.jsonc`):
+
+```json
+"custom/voxtype": {
+    "exec": "voxtype status --follow --format json",
+    "return-type": "json",
+    "format": "{}",
+    "tooltip": true
+}
+```
+
+Don't forget to add `"custom/voxtype"` to your modules list (e.g., in `modules-center` or `modules-right`).
+
+The module displays:
+- 🎙️ when idle (ready to record)
+- 🎤 when recording (hotkey held)
+- ⏳ when transcribing
+
+**Step 3: Add Waybar styles (optional)**
+
+Add to your `~/.config/waybar/style.css`:
+
+```css
+#custom-voxtype {
+    padding: 0 8px;
+}
+
+#custom-voxtype.recording {
+    color: #ff5555;
+    animation: pulse 1s infinite;
+}
+
+#custom-voxtype.transcribing {
+    color: #f1fa8c;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+```
+
+**Alternative: Simple polling approach**
+
+If you prefer not to use `--follow`, you can poll the status:
+
+```json
+"custom/voxtype": {
+    "exec": "voxtype status --format json",
+    "return-type": "json",
+    "format": "{}",
+    "interval": 1,
+    "tooltip": true
+}
+```
+
+### With Polybar
+
+Similar to Waybar, enable `state_file = "auto"` and create a custom script:
+
+```ini
+[module/voxtype]
+type = custom/script
+exec = voxtype status --format text
+interval = 1
+format = <label>
+label = %output%
+```
+
 ---
 
 ## Next Steps

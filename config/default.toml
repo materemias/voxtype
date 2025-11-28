@@ -64,3 +64,9 @@ on_recording_stop = false
 
 # Show notification with transcribed text after transcription completes
 on_transcription = true
+
+# State file for external integrations (Waybar, polybar, etc.)
+# Uncomment to enable. Use "auto" for default location ($XDG_RUNTIME_DIR/voxtype/state)
+# or provide a custom path. The daemon writes state ("idle", "recording", "transcribing")
+# to this file whenever it changes. See USER_MANUAL.md for Waybar setup instructions.
+# state_file = "auto"

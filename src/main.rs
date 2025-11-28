@@ -84,6 +84,17 @@ enum Commands {
 
     /// Show current configuration
     Config,
+
+    /// Show daemon status (for Waybar/polybar integration)
+    Status {
+        /// Continuously output status changes as JSON (for Waybar exec)
+        #[arg(long)]
+        follow: bool,
+
+        /// Output format: "text" (default) or "json" (for Waybar)
+        #[arg(long, default_value = "text")]
+        format: String,
+    },
 }
 
 #[tokio::main]
@@ -140,6 +151,10 @@ async fn main() -> anyhow::Result<()> {
 
         Commands::Config => {
             show_config(&config)?;
+        }
+
+        Commands::Status { follow, format } => {
+            run_status(&config, follow, &format).await?;
         }
     }
 
@@ -305,6 +320,12 @@ on_recording_stop = false
 
 # Show notification with transcribed text after transcription completes
 on_transcription = true
+
+# State file for external integrations (Waybar, polybar, etc.)
+# Uncomment to enable. Use "auto" for default location ($XDG_RUNTIME_DIR/voxtype/state)
+# or provide a custom path. The daemon writes state ("idle", "recording", "transcribing")
+# to this file whenever it changes.
+# state_file = "auto"
 "#;
 
 /// Run the setup command
@@ -447,6 +468,127 @@ async fn run_setup(config: &config::Config, download: bool) -> anyhow::Result<()
     Ok(())
 }
 
+/// Run the status command - show current daemon state
+async fn run_status(config: &config::Config, follow: bool, format: &str) -> anyhow::Result<()> {
+    let state_file = config.resolve_state_file();
+
+    if state_file.is_none() {
+        eprintln!("Error: state_file is not configured.");
+        eprintln!();
+        eprintln!("To enable status monitoring, add to your config.toml:");
+        eprintln!();
+        eprintln!("  state_file = \"auto\"");
+        eprintln!();
+        eprintln!("This enables external integrations like Waybar to monitor voxtype state.");
+        std::process::exit(1);
+    }
+
+    let state_path = state_file.unwrap();
+
+    if !follow {
+        // One-shot: just read and print current state
+        let state = std::fs::read_to_string(&state_path).unwrap_or_else(|_| "stopped".to_string());
+        let state = state.trim();
+
+        if format == "json" {
+            println!("{}", format_state_json(state));
+        } else {
+            println!("{}", state);
+        }
+        return Ok(());
+    }
+
+    // Follow mode: watch for changes using inotify
+    use notify::{Config as NotifyConfig, RecommendedWatcher, RecursiveMode, Watcher};
+    use std::sync::mpsc::channel;
+    use std::time::Duration;
+
+    // Print initial state
+    let state = std::fs::read_to_string(&state_path).unwrap_or_else(|_| "stopped".to_string());
+    let state = state.trim();
+    if format == "json" {
+        println!("{}", format_state_json(state));
+    } else {
+        println!("{}", state);
+    }
+
+    // Set up file watcher
+    let (tx, rx) = channel();
+    let mut watcher = RecommendedWatcher::new(
+        move |res| {
+            let _ = tx.send(res);
+        },
+        NotifyConfig::default().with_poll_interval(Duration::from_millis(100)),
+    )?;
+
+    // Watch the state file's parent directory (file may not exist yet)
+    if let Some(parent) = state_path.parent() {
+        std::fs::create_dir_all(parent)?;
+        watcher.watch(parent, RecursiveMode::NonRecursive)?;
+    }
+
+    // Also try to watch the file directly if it exists
+    if state_path.exists() {
+        let _ = watcher.watch(&state_path, RecursiveMode::NonRecursive);
+    }
+
+    let mut last_state = state.to_string();
+
+    loop {
+        match rx.recv_timeout(Duration::from_millis(500)) {
+            Ok(Ok(_event)) => {
+                // File changed, read new state
+                if let Ok(new_state) = std::fs::read_to_string(&state_path) {
+                    let new_state = new_state.trim().to_string();
+                    if new_state != last_state {
+                        if format == "json" {
+                            println!("{}", format_state_json(&new_state));
+                        } else {
+                            println!("{}", new_state);
+                        }
+                        last_state = new_state;
+                    }
+                }
+            }
+            Ok(Err(e)) => {
+                tracing::warn!("Watch error: {:?}", e);
+            }
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                // Check if file was deleted (daemon stopped)
+                if !state_path.exists() && last_state != "stopped" {
+                    if format == "json" {
+                        println!("{}", format_state_json("stopped"));
+                    } else {
+                        println!("stopped");
+                    }
+                    last_state = "stopped".to_string();
+                }
+            }
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                break;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Format state as JSON for Waybar consumption
+fn format_state_json(state: &str) -> String {
+    let (text, class, tooltip) = match state {
+        "recording" => ("🎤", "recording", "Recording..."),
+        "transcribing" => ("⏳", "transcribing", "Transcribing..."),
+        "idle" => ("🎙️", "idle", "Voxtype ready - hold hotkey to record"),
+        "stopped" => ("", "stopped", "Voxtype not running"),
+        _ => ("?", "unknown", "Unknown state"),
+    };
+
+    format!(
+        r#"{{"text": "{}", "class": "{}", "tooltip": "{}"}}"#,
+        text, class, tooltip
+    )
+}
+
 /// Show current configuration
 fn show_config(config: &config::Config) -> anyhow::Result<()> {
     println!("Current Configuration\n");
@@ -490,6 +632,14 @@ fn show_config(config: &config::Config) -> anyhow::Result<()> {
         "  on_transcription = {}",
         config.output.notification.on_transcription
     );
+
+    if let Some(ref state_file) = config.state_file {
+        println!("\n[integration]");
+        println!("  state_file = {:?}", state_file);
+        if let Some(resolved) = config.resolve_state_file() {
+            println!("  (resolves to: {:?})", resolved);
+        }
+    }
 
     println!("\n---");
     println!(

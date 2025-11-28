@@ -308,6 +308,61 @@ type_delay_ms = 10  # 10ms delay between characters
 
 ---
 
+## state_file
+
+**Type:** String (optional)
+**Default:** Not set (disabled)
+**Required:** No
+
+Path to a state file for external integrations like Waybar or Polybar. When configured, the daemon writes its current state to this file whenever state changes.
+
+**Values written:**
+- `idle` - Ready for input
+- `recording` - Push-to-talk active, capturing audio
+- `transcribing` - Processing audio through Whisper
+
+**Special value:**
+- `"auto"` - Uses `$XDG_RUNTIME_DIR/voxtype/state` (recommended)
+
+**Example:**
+```toml
+# Use automatic location (recommended)
+state_file = "auto"
+
+# Or specify explicit path
+state_file = "/tmp/voxtype-state"
+```
+
+**Usage with `voxtype status`:**
+
+Once enabled, you can monitor the state:
+
+```bash
+# One-shot check
+voxtype status
+
+# JSON output for scripts
+voxtype status --format json
+
+# Continuous monitoring (for Waybar)
+voxtype status --follow --format json
+```
+
+**Waybar module example:**
+
+```json
+"custom/voxtype": {
+    "exec": "voxtype status --follow --format json",
+    "return-type": "json",
+    "format": "{}",
+    "tooltip": true
+}
+```
+
+See [User Manual - Waybar Integration](USER_MANUAL.md#with-waybar-status-indicator) for complete setup instructions.
+
+---
+
 ## CLI Overrides
 
 Most configuration options can be overridden via command line:
