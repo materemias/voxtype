@@ -238,6 +238,68 @@ fn resample(samples: &[f32], from_rate: u32, to_rate: u32) -> Vec<f32> {
     output
 }
 
+/// Default configuration file content
+const DEFAULT_CONFIG: &str = r#"# Voxtype Configuration
+#
+# Location: ~/.config/voxtype/config.toml
+# All settings can be overridden via CLI flags
+
+[hotkey]
+# Key to hold for push-to-talk
+# Common choices: SCROLLLOCK, PAUSE, RIGHTALT, F13-F24
+# Use `evtest` to find key names for your keyboard
+key = "SCROLLLOCK"
+
+# Optional modifier keys that must also be held
+# Example: modifiers = ["LEFTCTRL", "LEFTALT"]
+modifiers = []
+
+[audio]
+# Audio input device ("default" uses system default)
+# List devices with: pactl list sources short
+device = "default"
+
+# Sample rate in Hz (whisper expects 16000)
+sample_rate = 16000
+
+# Maximum recording duration in seconds (safety limit)
+max_duration_secs = 60
+
+[whisper]
+# Model to use for transcription
+# Options: tiny, tiny.en, base, base.en, small, small.en, medium, medium.en, large-v3
+# .en models are English-only but faster and more accurate for English
+# Or provide absolute path to a custom .bin model file
+model = "base.en"
+
+# Language for transcription
+# Use "en" for English, "auto" for auto-detection
+# See: https://github.com/openai/whisper#available-models-and-languages
+language = "en"
+
+# Translate non-English speech to English
+translate = false
+
+# Number of CPU threads for inference (omit for auto-detection)
+# threads = 4
+
+[output]
+# Primary output mode: "type" or "clipboard"
+# - type: Simulates keyboard input at cursor position (requires ydotool)
+# - clipboard: Copies text to clipboard (requires wl-copy)
+mode = "type"
+
+# Fall back to clipboard if typing fails
+fallback_to_clipboard = true
+
+# Show desktop notification with transcribed text
+notification = true
+
+# Delay between typed characters in milliseconds
+# 0 = fastest possible, increase if characters are dropped
+type_delay_ms = 0
+"#;
+
 /// Run the setup command
 async fn run_setup(config: &config::Config, download: bool) -> anyhow::Result<()> {
     println!("Voxtype Setup\n");
@@ -248,6 +310,17 @@ async fn run_setup(config: &config::Config, download: bool) -> anyhow::Result<()
     config::Config::ensure_directories()?;
     println!("  ✓ Config directory: {:?}", config::Config::config_dir().unwrap_or_default());
     println!("  ✓ Models directory: {:?}", config::Config::models_dir());
+
+    // Create default config file if it doesn't exist
+    if let Some(config_path) = config::Config::default_path() {
+        if !config_path.exists() {
+            println!("\nCreating default config file...");
+            std::fs::write(&config_path, DEFAULT_CONFIG)?;
+            println!("  ✓ Created: {:?}", config_path);
+        } else {
+            println!("\n  Config file exists: {:?}", config_path);
+        }
+    }
 
     let mut all_ok = true;
 
