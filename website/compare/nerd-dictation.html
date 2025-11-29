@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Compare Voxtype and Nerd-dictation for Linux speech-to-text. Whisper accuracy vs VOSK hackability.">
+    <title>Voxtype vs Nerd-dictation | Linux Speech-to-Text Comparison</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/compare.css">
+    <link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="../" class="nav-logo">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+                <span>Voxtype</span>
+            </a>
+            <div class="nav-links">
+                <a href="../#features">Features</a>
+                <a href="../#install">Install</a>
+                <a href="./">Compare</a>
+                <a href="https://github.com/peteonrails/voxtype" class="nav-github">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <article class="compare-article container">
+        <a href="./" class="back-link">&larr; All Comparisons</a>
+
+        <h1>Voxtype vs Nerd-dictation</h1>
+        <p class="lead">Two approaches to offline speech-to-text on Linux. Both work on Wayland. Which fits your workflow?</p>
+
+        <h2>At a Glance</h2>
+        <table class="inline-table">
+            <tr>
+                <th>Aspect</th>
+                <th>Voxtype</th>
+                <th>Nerd-dictation</th>
+            </tr>
+            <tr>
+                <td>Engine</td>
+                <td>Whisper (whisper.cpp)</td>
+                <td>VOSK</td>
+            </tr>
+            <tr>
+                <td>Language</td>
+                <td>Rust</td>
+                <td>Python (single file)</td>
+            </tr>
+            <tr>
+                <td>Architecture</td>
+                <td>Systemd daemon</td>
+                <td><strong>Foreground process</strong></td>
+            </tr>
+            <tr>
+                <td>Wayland</td>
+                <td>Native (evdev)</td>
+                <td>Via ydotool</td>
+            </tr>
+            <tr>
+                <td>Cursor Injection</td>
+                <td>Yes (ydotool)</td>
+                <td>Yes (xdotool/ydotool)</td>
+            </tr>
+            <tr>
+                <td>Recording Feedback</td>
+                <td>Audio + Notifications</td>
+                <td><strong>None</strong></td>
+            </tr>
+        </table>
+
+        <h2>Critical Differences</h2>
+
+        <h3>Daemon vs Foreground</h3>
+        <p><strong>Voxtype</strong> runs as a systemd user service. It starts automatically at login, runs invisibly, and is always ready.</p>
+        <p><strong>Nerd-dictation</strong> must run in a <strong>terminal foreground</strong>. You need to keep a terminal window open with the process running. Close the terminal, lose dictation. You can work around this with tmux or custom systemd units, but it's manual setup.</p>
+
+        <h3>Recording Feedback</h3>
+        <p><strong>Voxtype</strong> plays audio cues when recording starts and stops, plus optional desktop notifications. You know it's working without looking at the screen.</p>
+        <p><strong>Nerd-dictation</strong> provides <strong>no feedback whatsoever</strong>. No sound, no visual indicator, nothing. You press the hotkey and hope it's recording. You find out if it worked when text appears (or doesn't).</p>
+
+        <h2>Recognition Quality</h2>
+
+        <h3>Voxtype (Whisper)</h3>
+        <p>Whisper provides exceptional accuracy across accents and speaking styles. It handles technical terminology, mixed-language phrases, punctuation and capitalization, and unusual names.</p>
+        <p>Typical accuracy: <strong>95-99%</strong> depending on audio quality and model size.</p>
+
+        <h3>Nerd-dictation (VOSK)</h3>
+        <p>VOSK is remarkably lightweight but has lower raw accuracy. Output is all lowercase with no automatic punctuation. Works better with clear, deliberate speech.</p>
+        <p>Typical accuracy: <strong>85-95%</strong> depending on clarity and vocabulary.</p>
+
+        <h2>Setup Complexity</h2>
+
+        <h3>Voxtype</h3>
+        <pre><code># Install
+curl -LO https://github.com/peteonrails/voxtype/releases/download/v0.1.2/voxtype_0.1.2-1_amd64.deb
+sudo dpkg -i voxtype_0.1.2-1_amd64.deb
+
+# Download model and start
+voxtype setup --download
+systemctl --user enable --now voxtype</code></pre>
+        <p>Time to first transcription: ~5 minutes</p>
+
+        <h3>Nerd-dictation</h3>
+        <pre><code># Install VOSK
+pip install vosk
+
+# Download model manually
+mkdir -p ~/.config/vosk
+cd ~/.config/vosk
+wget https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip
+unzip vosk-model-en-us-0.22.zip
+
+# Clone and run
+git clone https://github.com/ideasman42/nerd-dictation
+./nerd-dictation/nerd-dictation begin --vosk-model-dir ~/.config/vosk/vosk-model-en-us-0.22</code></pre>
+        <p>Time to first transcription: ~15-30 minutes (including troubleshooting)</p>
+
+        <h2>Resource Usage</h2>
+        <table class="inline-table">
+            <tr>
+                <th>Metric</th>
+                <th>Voxtype</th>
+                <th>Nerd-dictation</th>
+            </tr>
+            <tr>
+                <td>Idle</td>
+                <td>~50MB, 0% CPU</td>
+                <td>Not running</td>
+            </tr>
+            <tr>
+                <td>Active</td>
+                <td>High CPU for 1-3s</td>
+                <td>~200MB, moderate CPU</td>
+            </tr>
+            <tr>
+                <td>Model size</td>
+                <td>300MB - 3GB</td>
+                <td>~50MB per language</td>
+            </tr>
+        </table>
+
+        <h2>Customization</h2>
+
+        <h3>Voxtype</h3>
+        <p>Configuration via <code>~/.config/voxtype/config.toml</code>:</p>
+        <pre><code>[hotkey]
+key = "rightctrl"
+mode = "toggle"  # or "push_to_talk"
+
+[audio.feedback]
+enabled = true
+theme = "subtle"</code></pre>
+
+        <h3>Nerd-dictation</h3>
+        <p>Python callbacks let you transform text:</p>
+        <pre><code>def process_text(text):
+    text = text.replace("period", ".")
+    text = text.replace("new line", "\n")
+    return text.capitalize()</code></pre>
+
+        <div class="verdict-box">
+            <h3>The Verdict</h3>
+            <p><strong>Choose Voxtype</strong> if you want the best accuracy available, use Wayland, and prefer tools that just work out of the box.</p>
+            <p><strong>Choose Nerd-dictation</strong> if you want to customize text processing with Python, prefer minimal footprint, or enjoy tinkering.</p>
+            <p>Many users keep both installed: Voxtype for daily dictation, Nerd-dictation for workflows needing text transformation.</p>
+        </div>
+
+        <h2>Links</h2>
+        <ul>
+            <li><a href="https://voxtype.io">Voxtype</a></li>
+            <li><a href="https://github.com/ideasman42/nerd-dictation">Nerd-dictation on GitHub</a></li>
+        </ul>
+    </article>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2025 Voxtype. MIT License.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
