@@ -1,5 +1,5 @@
 Name:           voxtype
-Version:        0.2.2
+Version:        0.3.0
 Release:        1%{?dist}
 Summary:        Push-to-talk voice-to-text for Wayland Linux
 
@@ -111,6 +111,12 @@ echo ""
 %{_datadir}/fish/vendor_completions.d/voxtype.fish
 
 %changelog
+* Mon Dec 15 2025 Peter Jackson <pete@peteonrails.com> - 0.3.0-1
+- Add wtype support for better CJK/Unicode text output (Korean, Chinese, Japanese)
+- wtype is now primary output method on Wayland (no daemon required)
+- Fallback chain: wtype -> ydotool -> clipboard
+- Fix systemd service not starting on login after logout
+
 * Sat Dec 14 2025 Peter Jackson <pete@peteonrails.com> - 0.2.2-1
 - Code cleanup: fix clippy warnings, derive Default, refactor build_stream
 - Wire up CLI commands: setup model --list, setup systemd --status, setup waybar --json/--css
