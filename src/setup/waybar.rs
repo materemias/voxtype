@@ -64,7 +64,7 @@ pub fn install() -> Result<(), VoxtypeError> {
     }
 
     // Prompt for confirmation
-    print!("This will modify your Waybar configuration:\n");
+    println!("This will modify your Waybar configuration:");
     println!("  Config: {}", config_path.display());
     println!("  Style:  {}", style_path.display());
     println!("\nA backup will be created before making changes.");
@@ -288,16 +288,15 @@ fn remove_module_from_config(content: &str) -> String {
             }
 
             // Find the actual start (including any leading whitespace/comma)
-            let mut actual_start = start;
             // Look backwards for comma or whitespace to remove
             let before = &result[..start];
             let trimmed_before = before.trim_end();
-            if trimmed_before.ends_with(',') {
-                actual_start = trimmed_before.len() - 1;
+            let actual_start = if trimmed_before.ends_with(',') {
+                trimmed_before.len() - 1
             } else {
                 // Include leading whitespace
-                actual_start = trimmed_before.len();
-            }
+                trimmed_before.len()
+            };
 
             // Check if there's a trailing comma to remove
             let after = &result[end..];
