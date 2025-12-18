@@ -135,9 +135,9 @@ impl TextOutput for PasteOutput {
 
         // Step 1: Copy to clipboard
         self.copy_to_clipboard(text).await?;
-	
-	// Small delay to ensure clipboard is set before pasting
-	tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        // Small delay to ensure clipboard is set before pasting
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         // Step 2: Simulate Ctrl+V
         self.simulate_ctrl_v().await?;
@@ -181,8 +181,9 @@ impl TextOutput for PasteOutput {
         }
 
         // Check if ydotoold is running by trying a no-op
+        // ydotool type "" should succeed quickly if daemon is running
         Command::new("ydotool")
-            .args(["key", ""])
+            .args(["type", ""])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status()
