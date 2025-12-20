@@ -17,6 +17,7 @@ makedepends=(
     'clang'
     'cmake'
     'pkgconf'
+    'shaderc'
     'vulkan-headers'
 )
 optdepends=(
@@ -68,13 +69,22 @@ build() {
     unset CXXFLAGS
     unset LDFLAGS
 
+    # Limit parallelism to prevent cmake deadlocks during whisper-rs build
+    export CMAKE_BUILD_PARALLEL_LEVEL=4
+    export MAKEFLAGS="-j4"
+
     # Build native CPU binary (optimized for the user's machine)
-    cargo build --frozen --release
+    # Disable LTO to prevent linking hangs (Cargo.toml has lto=true)
+    cargo build --frozen --release \
+        --config 'profile.release.lto=false' \
+        --config 'profile.release.codegen-units=8'
     cp target/release/voxtype voxtype-cpu
 
     # Build Vulkan GPU binary (for GPU acceleration)
     cargo clean
-    cargo build --frozen --release --features gpu-vulkan
+    cargo build --frozen --release --features gpu-vulkan \
+        --config 'profile.release.lto=false' \
+        --config 'profile.release.codegen-units=8'
     cp target/release/voxtype voxtype-vulkan
 }
 

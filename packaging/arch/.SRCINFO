@@ -11,6 +11,7 @@ pkgbase = voxtype
 	makedepends = clang
 	makedepends = cmake
 	makedepends = pkgconf
+	makedepends = shaderc
 	makedepends = vulkan-headers
 	depends = alsa-lib
 	depends = curl
