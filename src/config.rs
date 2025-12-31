@@ -152,6 +152,7 @@ pub struct Config {
 pub struct HotkeyConfig {
     /// Key name (evdev KEY_* constant name, without the KEY_ prefix)
     /// Examples: "SCROLLLOCK", "RIGHTALT", "PAUSE", "F24"
+    #[serde(default = "default_hotkey_key")]
     pub key: String,
 
     /// Optional modifier keys that must also be held
@@ -201,6 +202,10 @@ pub struct AudioFeedbackConfig {
     /// Volume level (0.0 to 1.0)
     #[serde(default = "default_volume")]
     pub volume: f32,
+}
+
+fn default_hotkey_key() -> String {
+    "SCROLLLOCK".to_string()
 }
 
 fn default_sound_theme() -> String {
@@ -529,6 +534,32 @@ mod tests {
         assert!(config.output.notification.on_recording_start);
         assert!(config.output.notification.on_recording_stop);
         assert!(!config.output.notification.on_transcription);
+    }
+
+    #[test]
+    fn test_parse_hotkey_disabled_without_key() {
+        // Regression test for GitHub issue #17
+        // When hotkey is disabled, the key field should not be required
+        let toml_str = r#"
+            [hotkey]
+            enabled = false
+
+            [audio]
+            device = "default"
+            sample_rate = 16000
+            max_duration_secs = 60
+
+            [whisper]
+            model = "base.en"
+            language = "en"
+
+            [output]
+            mode = "type"
+        "#;
+
+        let config: Config = toml::from_str(toml_str).unwrap();
+        assert!(!config.hotkey.enabled);
+        assert_eq!(config.hotkey.key, "SCROLLLOCK"); // defaults to SCROLLLOCK
     }
 
     #[test]
