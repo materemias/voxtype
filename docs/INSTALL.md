@@ -34,11 +34,14 @@ This guide covers all methods for installing Voxtype on Linux systems.
 |-----------|----------|---------|
 | Linux desktop | Yes | Wayland or X11 |
 | PipeWire or PulseAudio | Yes | Audio capture |
+| pipewire-alsa | Yes (if using PipeWire) | Routes ALSA audio through PipeWire |
 | `input` group membership | Yes | Hotkey detection via evdev |
 | wtype | Recommended | Keyboard simulation on Wayland (best CJK support) |
 | ydotool | Recommended | Keyboard simulation on X11 (or Wayland fallback) |
 | wl-clipboard | Recommended | Clipboard fallback on Wayland |
 | libnotify | Optional | Desktop notifications |
+
+> **Note:** Most modern Linux distributions use PipeWire for audio. If you're using PipeWire, you must install `pipewire-alsa` to allow ALSA applications (like Voxtype) to capture audio. Without it, you'll get "device not available" errors.
 
 ### Build Dependencies (source builds only)
 
@@ -133,6 +136,10 @@ makepkg -si
 ```bash
 # Install recommended optional packages
 sudo pacman -S wtype wl-clipboard libnotify
+
+# If using PipeWire (most Arch systems), install ALSA compatibility:
+sudo pacman -S pipewire-alsa
+
 # For X11 or as Wayland fallback:
 sudo pacman -S ydotool
 ```
@@ -532,8 +539,13 @@ sudo pacman -S wtype  # or apt/dnf
 systemctl --user enable --now ydotool
 ```
 
-**No audio captured**
+**No audio captured / "device not available"**
 ```bash
+# If using PipeWire, install ALSA compatibility layer
+sudo pacman -S pipewire-alsa  # Arch
+sudo apt install pipewire-alsa  # Debian/Ubuntu
+sudo dnf install pipewire-alsa  # Fedora
+
 # Check PipeWire/PulseAudio is running
 pactl info
 # Check default source
