@@ -656,7 +656,9 @@ If Whisper transcribes "vox type" (or "Vox Type"), it will be replaced with "vox
 [text.replacements]
 "vox type" = "voxtype"
 "oh marky" = "Omarchy"
-claude = "Claude"
+"oh marchy" = "Omarchy"
+"omar g" = "Omarchy"
+"omar key" = "Omarchy"
 ```
 
 ---
