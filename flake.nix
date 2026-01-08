@@ -93,17 +93,29 @@
           default = mkVoxtype {};
 
           # Vulkan GPU acceleration
-          vulkan = mkVoxtype {
-            pname = "voxtype-vulkan";
-            features = [ "gpu-vulkan" ];
-            extraNativeBuildInputs = with pkgs; [
-              shaderc
-              vulkan-headers
-            ];
-            extraBuildInputs = with pkgs; [
-              vulkan-loader
-            ];
-          };
+          vulkan = let
+            vulkanPkg = mkVoxtype {
+              pname = "voxtype-vulkan";
+              features = [ "gpu-vulkan" ];
+              extraNativeBuildInputs = with pkgs; [
+                shaderc
+                vulkan-headers
+                vulkan-loader
+              ];
+              extraBuildInputs = with pkgs; [
+                vulkan-headers
+                vulkan-loader
+              ];
+            };
+          in vulkanPkg.overrideAttrs (old: {
+            # Help cmake find Vulkan SDK components
+            preBuild = (old.preBuild or "") + ''
+              export CMAKE_BUILD_PARALLEL_LEVEL=$NIX_BUILD_CORES
+              export VULKAN_SDK="${pkgs.vulkan-loader}"
+              export Vulkan_INCLUDE_DIR="${pkgs.vulkan-headers}/include"
+              export Vulkan_LIBRARY="${pkgs.vulkan-loader}/lib/libvulkan.so"
+            '';
+          });
         };
 
         # Development shell with all dependencies
