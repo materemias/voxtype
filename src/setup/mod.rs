@@ -424,10 +424,11 @@ pub async fn run_setup(config: &Config, download: bool, quiet: bool, no_post_ins
         println!("     Example for Hyprland: bind = , XF86AudioRecord, exec, voxtype record-toggle\n");
         println!("  2. Start the daemon: voxtype daemon\n");
         println!("Optional:");
-        println!("  voxtype setup check    - Verify system configuration");
-        println!("  voxtype setup model    - Download/switch whisper models");
-        println!("  voxtype setup systemd  - Install as systemd service");
-        println!("  voxtype setup waybar   - Get Waybar integration config");
+        println!("  voxtype setup check      - Verify system configuration");
+        println!("  voxtype setup model      - Download/switch whisper models");
+        println!("  voxtype setup systemd    - Install as systemd service");
+        println!("  voxtype setup waybar     - Get Waybar integration config");
+        println!("  voxtype setup compositor - Fix modifier key issues (Hyprland/Sway/River)");
     }
 
     Ok(())
