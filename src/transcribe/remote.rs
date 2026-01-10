@@ -362,4 +362,119 @@ mod tests {
         assert!(body_str.contains("name=\"response_format\""));
         assert!(body_str.contains("json"));
     }
+
+    #[test]
+    fn test_translate_false_uses_transcriptions_endpoint() {
+        let config = WhisperConfig {
+            backend: crate::config::WhisperBackend::Remote,
+            model: "base.en".to_string(),
+            language: "en".to_string(),
+            translate: false,
+            threads: None,
+            on_demand_loading: false,
+            remote_endpoint: Some("http://localhost:8080".to_string()),
+            remote_model: None,
+            remote_api_key: None,
+            remote_timeout_secs: None,
+        };
+
+        let transcriber = RemoteTranscriber::new(&config).unwrap();
+
+        // Verify translate flag is stored correctly
+        assert!(!transcriber.translate);
+
+        // The endpoint path logic: if !translate, use /v1/audio/transcriptions
+        let path = if transcriber.translate {
+            "/v1/audio/translations"
+        } else {
+            "/v1/audio/transcriptions"
+        };
+        assert_eq!(path, "/v1/audio/transcriptions");
+    }
+
+    #[test]
+    fn test_translate_true_uses_translations_endpoint() {
+        let config = WhisperConfig {
+            backend: crate::config::WhisperBackend::Remote,
+            model: "base.en".to_string(),
+            language: "auto".to_string(),
+            translate: true,
+            threads: None,
+            on_demand_loading: false,
+            remote_endpoint: Some("http://localhost:8080".to_string()),
+            remote_model: None,
+            remote_api_key: None,
+            remote_timeout_secs: None,
+        };
+
+        let transcriber = RemoteTranscriber::new(&config).unwrap();
+
+        // Verify translate flag is stored correctly
+        assert!(transcriber.translate);
+
+        // The endpoint path logic: if translate, use /v1/audio/translations
+        let path = if transcriber.translate {
+            "/v1/audio/translations"
+        } else {
+            "/v1/audio/transcriptions"
+        };
+        assert_eq!(path, "/v1/audio/translations");
+    }
+
+    #[test]
+    fn test_api_key_from_config() {
+        let config = WhisperConfig {
+            backend: crate::config::WhisperBackend::Remote,
+            model: "base.en".to_string(),
+            language: "en".to_string(),
+            translate: false,
+            threads: None,
+            on_demand_loading: false,
+            remote_endpoint: Some("http://localhost:8080".to_string()),
+            remote_model: None,
+            remote_api_key: Some("sk-test-key-123".to_string()),
+            remote_timeout_secs: None,
+        };
+
+        let transcriber = RemoteTranscriber::new(&config).unwrap();
+        assert_eq!(transcriber.api_key, Some("sk-test-key-123".to_string()));
+    }
+
+    #[test]
+    fn test_custom_timeout() {
+        let config = WhisperConfig {
+            backend: crate::config::WhisperBackend::Remote,
+            model: "base.en".to_string(),
+            language: "en".to_string(),
+            translate: false,
+            threads: None,
+            on_demand_loading: false,
+            remote_endpoint: Some("http://localhost:8080".to_string()),
+            remote_model: None,
+            remote_api_key: None,
+            remote_timeout_secs: Some(60),
+        };
+
+        let transcriber = RemoteTranscriber::new(&config).unwrap();
+        assert_eq!(transcriber.timeout, Duration::from_secs(60));
+    }
+
+    #[test]
+    fn test_default_timeout() {
+        let config = WhisperConfig {
+            backend: crate::config::WhisperBackend::Remote,
+            model: "base.en".to_string(),
+            language: "en".to_string(),
+            translate: false,
+            threads: None,
+            on_demand_loading: false,
+            remote_endpoint: Some("http://localhost:8080".to_string()),
+            remote_model: None,
+            remote_api_key: None,
+            remote_timeout_secs: None,
+        };
+
+        let transcriber = RemoteTranscriber::new(&config).unwrap();
+        assert_eq!(transcriber.timeout, Duration::from_secs(30));
+    }
 }

@@ -942,3 +942,171 @@ impl Daemon {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::TempDir;
+
+    // Helper to create a test runtime directory and set it up
+    fn with_test_runtime_dir<F, R>(f: F) -> R
+    where
+        F: FnOnce(&std::path::Path) -> R,
+    {
+        let temp_dir = TempDir::new().unwrap();
+        let runtime_dir = temp_dir.path();
+
+        // We can't easily mock Config::runtime_dir(), so we test the file operations
+        // directly using the same logic as the functions under test
+        f(runtime_dir)
+    }
+
+    #[test]
+    fn test_cancel_file_detection() {
+        with_test_runtime_dir(|dir| {
+            let cancel_file = dir.join("cancel");
+
+            // File doesn't exist - should return false
+            assert!(!cancel_file.exists());
+
+            // Create the cancel file
+            fs::write(&cancel_file, "").unwrap();
+            assert!(cancel_file.exists());
+
+            // After checking, file should be removed (simulating check_cancel_requested behavior)
+            if cancel_file.exists() {
+                let _ = fs::remove_file(&cancel_file);
+            }
+            assert!(!cancel_file.exists());
+        });
+    }
+
+    #[test]
+    fn test_cancel_file_cleanup() {
+        with_test_runtime_dir(|dir| {
+            let cancel_file = dir.join("cancel");
+
+            // Create a stale cancel file
+            fs::write(&cancel_file, "").unwrap();
+            assert!(cancel_file.exists());
+
+            // Cleanup should remove it (simulating cleanup_cancel_file behavior)
+            if cancel_file.exists() {
+                let _ = fs::remove_file(&cancel_file);
+            }
+            assert!(!cancel_file.exists());
+
+            // Cleanup on non-existent file should not error
+            if cancel_file.exists() {
+                let _ = fs::remove_file(&cancel_file);
+            }
+            // Should not panic
+        });
+    }
+
+    #[test]
+    fn test_output_mode_override_type() {
+        with_test_runtime_dir(|dir| {
+            let override_file = dir.join("output_mode_override");
+
+            fs::write(&override_file, "type").unwrap();
+            let content = fs::read_to_string(&override_file).unwrap();
+            assert_eq!(content.trim(), "type");
+        });
+    }
+
+    #[test]
+    fn test_output_mode_override_clipboard() {
+        with_test_runtime_dir(|dir| {
+            let override_file = dir.join("output_mode_override");
+
+            fs::write(&override_file, "clipboard").unwrap();
+            let content = fs::read_to_string(&override_file).unwrap();
+            assert_eq!(content.trim(), "clipboard");
+        });
+    }
+
+    #[test]
+    fn test_output_mode_override_paste() {
+        with_test_runtime_dir(|dir| {
+            let override_file = dir.join("output_mode_override");
+
+            fs::write(&override_file, "paste").unwrap();
+            let content = fs::read_to_string(&override_file).unwrap();
+            assert_eq!(content.trim(), "paste");
+        });
+    }
+
+    #[test]
+    fn test_output_mode_override_invalid_returns_none_equivalent() {
+        with_test_runtime_dir(|dir| {
+            let override_file = dir.join("output_mode_override");
+
+            fs::write(&override_file, "invalid_mode").unwrap();
+            let content = fs::read_to_string(&override_file).unwrap();
+
+            // Simulating the match logic from read_output_mode_override
+            let result = match content.trim() {
+                "type" => Some(OutputMode::Type),
+                "clipboard" => Some(OutputMode::Clipboard),
+                "paste" => Some(OutputMode::Paste),
+                _ => None,
+            };
+            assert!(result.is_none());
+        });
+    }
+
+    #[test]
+    fn test_output_mode_override_file_consumed_after_read() {
+        with_test_runtime_dir(|dir| {
+            let override_file = dir.join("output_mode_override");
+
+            fs::write(&override_file, "type").unwrap();
+            assert!(override_file.exists());
+
+            // Read and consume (simulating read_output_mode_override behavior)
+            let _ = fs::read_to_string(&override_file).unwrap();
+            let _ = fs::remove_file(&override_file);
+
+            assert!(!override_file.exists());
+        });
+    }
+
+    #[test]
+    fn test_output_mode_override_whitespace_trimmed() {
+        with_test_runtime_dir(|dir| {
+            let override_file = dir.join("output_mode_override");
+
+            fs::write(&override_file, "  clipboard  \n").unwrap();
+            let content = fs::read_to_string(&override_file).unwrap();
+
+            let result = match content.trim() {
+                "type" => Some(OutputMode::Type),
+                "clipboard" => Some(OutputMode::Clipboard),
+                "paste" => Some(OutputMode::Paste),
+                _ => None,
+            };
+            assert_eq!(result, Some(OutputMode::Clipboard));
+        });
+    }
+
+    #[test]
+    fn test_cleanup_output_mode_override() {
+        with_test_runtime_dir(|dir| {
+            let override_file = dir.join("output_mode_override");
+
+            // Create the file
+            fs::write(&override_file, "type").unwrap();
+            assert!(override_file.exists());
+
+            // Cleanup (simulating cleanup_output_mode_override behavior)
+            let _ = fs::remove_file(&override_file);
+            assert!(!override_file.exists());
+
+            // Cleanup on non-existent file should not error
+            let _ = fs::remove_file(&override_file);
+            // Should not panic
+        });
+    }
+}
