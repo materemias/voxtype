@@ -139,6 +139,30 @@ bindsym --release $mod+v exec voxtype record stop
 
 See [User Manual - Compositor Keybindings](USER_MANUAL.md#compositor-keybindings) for complete setup instructions.
 
+### cancel_key
+
+**Type:** String
+**Default:** None (disabled)
+**Required:** No
+
+Optional key to cancel recording or transcription in progress. When pressed, any active recording is discarded and any in-progress transcription is aborted. No text is output.
+
+**Example:**
+```toml
+[hotkey]
+key = "SCROLLLOCK"
+cancel_key = "ESC"  # Press Escape to cancel
+```
+
+**Valid key names:** Same as the `key` option - any valid Linux evdev key name.
+
+**Common cancel keys:**
+- `ESC` - Escape key
+- `BACKSPACE` - Backspace key
+- `F12` - Function key
+
+**Note:** This only applies when using evdev hotkey detection (`enabled = true`). When using compositor keybindings, use `voxtype record cancel` instead. See [User Manual - Canceling Transcription](USER_MANUAL.md#canceling-transcription).
+
 ---
 
 ## [audio]

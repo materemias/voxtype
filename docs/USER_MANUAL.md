@@ -10,6 +10,7 @@ Voxtype is a push-to-talk voice-to-text tool for Linux. Optimized for Wayland, w
 - [Configuration](#configuration)
 - [Hotkeys](#hotkeys)
 - [Compositor Keybindings](#compositor-keybindings)
+- [Canceling Transcription](#canceling-transcription)
 - [Whisper Models](#whisper-models)
 - [Remote Whisper Servers](#remote-whisper-servers)
 - [Output Modes](#output-modes)
@@ -169,6 +170,7 @@ Control recording from external sources (compositor keybindings, scripts).
 voxtype record start   # Start recording (sends SIGUSR1 to daemon)
 voxtype record stop    # Stop recording and transcribe (sends SIGUSR2 to daemon)
 voxtype record toggle  # Toggle recording state
+voxtype record cancel  # Cancel recording or transcription in progress
 ```
 
 This command is designed for use with compositor keybindings (Hyprland, Sway) instead of the built-in hotkey detection. See [Compositor Keybindings](#compositor-keybindings) for setup instructions.
@@ -421,6 +423,56 @@ voxtype record toggle
 ### Modifier Key Issues
 
 If you use a multi-key combination (e.g., `SUPER+CTRL+X`) and release keys slowly, the typed output may trigger compositor shortcuts instead of inserting text. See [Output Hooks (Compositor Integration)](#output-hooks-compositor-integration) for an automatic fix.
+
+---
+
+## Canceling Transcription
+
+You can cancel recording or transcription at any time. When canceled, no text is output.
+
+### With Compositor Keybindings
+
+Use `voxtype record cancel` bound to a key (typically Escape):
+
+**Hyprland** (in your submap):
+```hyprlang
+bind = , Escape, exec, voxtype record cancel
+bind = , Escape, submap, reset
+```
+
+**Sway** (in your mode):
+```
+bindsym Escape exec voxtype record cancel; mode "default"
+```
+
+**River**:
+```bash
+riverctl map voxtype_suppress None Escape spawn "voxtype record cancel"
+riverctl map voxtype_suppress None Escape enter-mode normal
+```
+
+If you use `voxtype setup compositor`, these bindings are generated automatically.
+
+### With Evdev Hotkeys
+
+Configure a cancel key in your `~/.config/voxtype/config.toml`:
+
+```toml
+[hotkey]
+key = "SCROLLLOCK"
+cancel_key = "ESC"  # Press Escape to cancel
+```
+
+Any valid evdev key name works. Common choices:
+- `ESC` - Escape key
+- `BACKSPACE` - Backspace key
+- `F12` - Function key
+
+### What Gets Canceled
+
+- **During recording**: Audio capture stops, recorded audio is discarded
+- **During transcription**: Transcription is aborted, no text is output
+- **While idle**: No effect
 
 ---
 
