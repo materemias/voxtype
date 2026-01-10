@@ -37,6 +37,8 @@ bind = , Alt_L, exec, true
 bind = , Alt_R, exec, true
 bind = , Shift_L, exec, true
 bind = , Shift_R, exec, true
+bind = , Escape, exec, voxtype record cancel  # Cancel recording/transcription
+bind = , Escape, submap, reset
 bind = , F12, submap, reset  # Emergency escape if voxtype crashes
 submap = reset
 "#;
@@ -60,6 +62,7 @@ mode "voxtype_suppress" {
     bindsym Alt_R nop
     bindsym Shift_L nop
     bindsym Shift_R nop
+    bindsym Escape exec voxtype record cancel; mode "default"  # Cancel recording/transcription
     bindsym F12 mode "default"  # Emergency escape if voxtype crashes
 }
 "#;
@@ -94,6 +97,10 @@ riverctl map voxtype_suppress None Alt_L spawn true
 riverctl map voxtype_suppress None Alt_R spawn true
 riverctl map voxtype_suppress None Shift_L spawn true
 riverctl map voxtype_suppress None Shift_R spawn true
+
+# Cancel recording/transcription with Escape
+riverctl map voxtype_suppress None Escape spawn "voxtype record cancel"
+riverctl map voxtype_suppress None Escape enter-mode normal
 
 # Emergency escape if voxtype crashes
 riverctl map voxtype_suppress None F12 enter-mode normal

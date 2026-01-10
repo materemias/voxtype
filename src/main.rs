@@ -67,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
             transcribe_file(&config, &file)?;
         }
 
-        Commands::Setup { action, download, quiet, no_post_install } => {
+        Commands::Setup { action, download, model, quiet, no_post_install } => {
             match action {
                 Some(SetupAction::Check) => {
                     setup::run_checks(&config).await?;
@@ -125,7 +125,7 @@ async fn main() -> anyhow::Result<()> {
                 }
                 None => {
                     // Default: run setup (non-blocking)
-                    setup::run_setup(&config, download, quiet, no_post_install).await?;
+                    setup::run_setup(&config, download, model.as_deref(), quiet, no_post_install).await?;
                 }
             }
         }
@@ -146,10 +146,11 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Send a record command to the running daemon via Unix signals
+/// Send a record command to the running daemon via Unix signals or file triggers
 fn send_record_command(config: &config::Config, action: RecordAction) -> anyhow::Result<()> {
     use nix::sys::signal::{kill, Signal};
     use nix::unistd::Pid;
+    use voxtype::OutputModeOverride;
 
     // Read PID from the pid file
     let pid_file = config::Config::runtime_dir().join("pid");
@@ -177,11 +178,31 @@ fn send_record_command(config: &config::Config, action: RecordAction) -> anyhow:
         std::process::exit(1);
     }
 
+    // Handle cancel separately (uses file trigger instead of signal)
+    if matches!(action, RecordAction::Cancel) {
+        let cancel_file = config::Config::runtime_dir().join("cancel");
+        std::fs::write(&cancel_file, "cancel")
+            .map_err(|e| anyhow::anyhow!("Failed to write cancel file: {}", e))?;
+        return Ok(());
+    }
+
+    // Write output mode override file if specified
+    if let Some(mode_override) = action.output_mode_override() {
+        let override_file = config::Config::runtime_dir().join("output_mode_override");
+        let mode_str = match mode_override {
+            OutputModeOverride::Type => "type",
+            OutputModeOverride::Clipboard => "clipboard",
+            OutputModeOverride::Paste => "paste",
+        };
+        std::fs::write(&override_file, mode_str)
+            .map_err(|e| anyhow::anyhow!("Failed to write output mode override: {}", e))?;
+    }
+
     // For toggle, we need to read current state to decide which signal to send
-    let signal = match action {
-        RecordAction::Start => Signal::SIGUSR1,
-        RecordAction::Stop => Signal::SIGUSR2,
-        RecordAction::Toggle => {
+    let signal = match &action {
+        RecordAction::Start { .. } => Signal::SIGUSR1,
+        RecordAction::Stop { .. } => Signal::SIGUSR2,
+        RecordAction::Toggle { .. } => {
             // Read current state to determine action
             let state_file = match config.resolve_state_file() {
                 Some(path) => path,
@@ -207,6 +228,7 @@ fn send_record_command(config: &config::Config, action: RecordAction) -> anyhow:
                 Signal::SIGUSR1 // Start
             }
         }
+        RecordAction::Cancel => unreachable!(), // Handled above
     };
 
     kill(Pid::from_raw(pid), signal)

@@ -61,6 +61,129 @@
 
             <!-- v0.4.x Era Posts -->
 
+            <article class="news-article" id="v0411">
+                <div class="article-meta">
+                    <time datetime="2026-01-10">January 10, 2026</time>
+                    <span class="article-tag">Release</span>
+                </div>
+                <h2>v0.4.11: Remote Whisper, Cancel Transcription, Output Mode Override</h2>
+                <div class="article-body">
+                    <p>Voxtype 0.4.11 brings remote transcription servers, the ability to cancel mid-recording, and per-command output mode control.</p>
+
+                    <h3>Remote Whisper Server Support</h3>
+                    <p>Run transcription on a powerful server instead of your local machine. Voxtype now supports any OpenAI-compatible Whisper API &mdash; including self-hosted servers (whisper.cpp, faster-whisper, NVIDIA Parakeet) and cloud providers like OpenAI.</p>
+
+                    <p><strong>Why use it:</strong> Offload CPU/GPU work to a home server. Get ~1.5s transcription instead of 15-20s on CPU. Share one GPU across multiple machines.</p>
+
+                    <div class="code-block">
+                        <div class="code-header"><span>Self-hosted server</span></div>
+                        <pre><code>[whisper]
+backend = "remote"
+remote_endpoint = "http://your-server:8080"</code></pre>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-header"><span>OpenAI cloud API</span></div>
+                        <pre><code>[whisper]
+backend = "remote"
+remote_endpoint = "https://api.openai.com"
+remote_api_key = "sk-your-openai-key"
+remote_model = "whisper-1"</code></pre>
+                    </div>
+
+                    <p><strong>Privacy note:</strong> Voxtype is designed to be local-first &mdash; your voice data never leaves your machine by default. Using a remote endpoint outside your trusted local network means your audio is transmitted to that server. Only use cloud APIs if you understand and accept this tradeoff.</p>
+
+                    <h3>Cancel Transcription</h3>
+                    <p>Changed your mind? Cancel recording or transcription with a single command.</p>
+
+                    <p><strong>Why use it:</strong> Stop a recording you don't want without waiting for transcription. No more unwanted text appearing at your cursor.</p>
+
+                    <div class="code-block">
+                        <pre><code># Bind to Escape in your compositor
+voxtype record cancel</code></pre>
+                    </div>
+
+                    <p>The <code>voxtype setup compositor</code> command now adds an Escape binding to cancel automatically.</p>
+
+                    <h3>Output Mode Override</h3>
+                    <p>Override the output mode on a per-command basis. Type by default, but paste this one time.</p>
+
+                    <p><strong>Why use it:</strong> Different contexts need different output. Type into your terminal, but paste into a web form that fights with simulated keystrokes.</p>
+
+                    <div class="code-block">
+                        <pre><code># Type (default)
+voxtype record start
+
+# Paste this time only
+voxtype record start --paste
+
+# Clipboard this time only
+voxtype record stop --clipboard</code></pre>
+                    </div>
+
+                    <h3>Setup Improvements</h3>
+                    <p>The <code>--model</code> flag lets you specify which Whisper model to download non-interactively. Perfect for automated setups and Omarchy integration.</p>
+
+                    <div class="code-block">
+                        <pre><code>voxtype setup --download --model large-v3-turbo --quiet</code></pre>
+                    </div>
+
+                    <h3>Bug Fixes</h3>
+                    <ul>
+                        <li>Fixed stale cancel file causing next recording to cancel unexpectedly</li>
+                        <li>Added 14 new tests for cancel and output mode override logic</li>
+                    </ul>
+                </div>
+            </article>
+
+            <article class="news-article" id="v0410">
+                <div class="article-meta">
+                    <time datetime="2026-01-08">January 8, 2026</time>
+                    <span class="article-tag">Release</span>
+                </div>
+                <h2>v0.4.10: Compositor Integration, Auto-Submit</h2>
+                <div class="article-body">
+                    <p>Voxtype 0.4.10 fixes the modifier key interference problem and adds auto-submit for LLM workflows.</p>
+
+                    <h3>Compositor Integration</h3>
+                    <p>If you use keybindings with modifiers (like Super+Ctrl+X), releasing keys slowly could cause modifiers to interfere with typed text. This release adds compositor-level integration to fix it.</p>
+
+                    <p><strong>Why use it:</strong> Eliminates "super+h" appearing instead of "h" when your fingers are slow to release modifier keys.</p>
+
+                    <div class="code-block">
+                        <pre><code># Generate compositor config for Hyprland, Sway, or River
+voxtype setup compositor hyprland
+
+# Or let it auto-detect
+voxtype setup compositor</code></pre>
+                    </div>
+
+                    <p>This creates a submap that suppresses modifier keys during text output. Pre/post output hooks handle the switching automatically.</p>
+
+                    <h3>Auto-Submit</h3>
+                    <p>Send Enter automatically after transcription. Contributed by Rob Zolkos.</p>
+
+                    <p><strong>Why use it:</strong> Voice-driven LLM prompting. Dictate your question and have it submit immediately to Claude, ChatGPT, or your local Ollama.</p>
+
+                    <div class="code-block">
+                        <div class="code-header"><span>config.toml</span></div>
+                        <pre><code>[output]
+auto_submit = true</code></pre>
+                    </div>
+
+                    <h3>How to Update</h3>
+                    <p>Update via your package manager or download from <a href="https://github.com/peteonrails/voxtype/releases">GitHub Releases</a>.</p>
+
+                    <div class="code-block">
+                        <pre><code># Arch (AUR)
+yay -S voxtype
+
+# After updating, regenerate compositor config
+voxtype setup compositor</code></pre>
+                    </div>
+                </div>
+            </article>
+
             <article class="news-article" id="man-pages">
                 <div class="article-meta">
                     <time datetime="2026-01-05">January 5, 2026</time>

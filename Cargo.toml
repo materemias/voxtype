@@ -1,6 +1,9 @@
+[workspace]
+members = ["xtask"]
+
 [package]
 name = "voxtype"
-version = "0.4.10"
+version = "0.4.11"
 edition = "2021"
 authors = ["Peter Jackson", "Jean-Paul van Tillo", "Máté Rémiás", "Rob Zolkos"]
 description = "Push-to-talk voice-to-text for Wayland"
@@ -44,6 +47,9 @@ nix = { version = "0.29", features = ["signal", "process"] }  # Unix signals for
 # Audio capture
 cpal = "0.15"
 hound = "3"  # WAV file reading/writing
+
+# HTTP client for remote transcription
+ureq = { version = "2", features = ["json"] }
 
 # Audio playback (for feedback sounds)
 rodio = { version = "0.19", default-features = false, features = ["wav"] }
