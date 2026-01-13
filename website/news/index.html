@@ -61,6 +61,58 @@
 
             <!-- v0.4.x Era Posts -->
 
+            <article class="news-article" id="v0413">
+                <div class="article-meta">
+                    <time datetime="2026-01-13">January 13, 2026</time>
+                    <span class="article-tag">Release</span>
+                </div>
+                <h2>v0.4.13: GPU Memory Isolation</h2>
+                <div class="article-body">
+                    <p>Voxtype 0.4.13 adds GPU memory isolation for laptop users with hybrid graphics.</p>
+
+                    <h3>GPU Isolation Mode</h3>
+                    <p>When enabled, transcription runs in a subprocess that exits after each recording. This fully releases GPU memory between transcriptions, allowing your discrete GPU to power down when not in use.</p>
+
+                    <p><strong>Why use it:</strong> Laptops with NVIDIA Optimus or AMD switchable graphics keep the dGPU active when Voxtype holds GPU memory. GPU isolation lets the dGPU sleep between transcriptions, saving battery.</p>
+
+                    <div class="code-block">
+                        <div class="code-header"><span>config.toml</span></div>
+                        <pre><code>[whisper]
+gpu_isolation = true</code></pre>
+                    </div>
+
+                    <h3>Performance</h3>
+                    <p>The model loads while you speak, so there's minimal perceived latency. Benchmarks on an AMD Radeon RX 7800 XT with large-v3-turbo:</p>
+
+                    <table class="performance-table">
+                        <thead>
+                            <tr>
+                                <th>Mode</th>
+                                <th>Transcription Latency</th>
+                                <th>Idle RAM</th>
+                                <th>Idle GPU Memory</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Standard</td>
+                                <td>0.49s avg</td>
+                                <td>~1.6 GB</td>
+                                <td>409 MB</td>
+                            </tr>
+                            <tr>
+                                <td>GPU Isolation</td>
+                                <td>0.50s avg</td>
+                                <td>0</td>
+                                <td>0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <p>GPU isolation adds about 10ms (2%) to transcription time while completely releasing memory between recordings.</p>
+                </div>
+            </article>
+
             <article class="news-article" id="v0412">
                 <div class="article-meta">
                     <time datetime="2026-01-11">January 11, 2026</time>

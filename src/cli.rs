@@ -83,6 +83,27 @@ pub enum Commands {
         file: std::path::PathBuf,
     },
 
+    /// Internal: Worker process for GPU-isolated transcription
+    /// Reads audio from stdin, writes transcription result to stdout
+    #[command(hide = true)]
+    TranscribeWorker {
+        /// Model name or path (passed from parent process)
+        #[arg(long)]
+        model: Option<String>,
+
+        /// Language code (passed from parent process)
+        #[arg(long)]
+        language: Option<String>,
+
+        /// Enable translation to English (passed from parent process)
+        #[arg(long)]
+        translate: bool,
+
+        /// Number of threads for inference (passed from parent process)
+        #[arg(long)]
+        threads: Option<usize>,
+    },
+
     /// Setup and installation utilities
     Setup {
         #[command(subcommand)]

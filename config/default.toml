@@ -80,6 +80,10 @@ translate = false
 # When false, model is kept in memory for faster response times (default)
 on_demand_loading = false
 
+# GPU memory isolation mode
+# Enable on laptops with hybrid graphics to let dGPU sleep between transcriptions.
+# gpu_isolation = true
+
 [output]
 # Primary output mode: "type", "clipboard", or "paste"
 # - type: Simulates keyboard input at cursor position (requires ydotool)

@@ -529,6 +529,13 @@ impl Daemon {
                                         transcribe::create_transcriber(&config)
                                     }));
                                     tracing::debug!("Started background model loading");
+                                } else if let Some(ref t) = transcriber_preloaded {
+                                    // For gpu_isolation mode: prepare the subprocess now
+                                    // (spawns worker and loads model while user speaks)
+                                    let transcriber = t.clone();
+                                    tokio::task::spawn_blocking(move || {
+                                        transcriber.prepare();
+                                    });
                                 }
 
                                 // Create and start audio capture
@@ -628,6 +635,13 @@ impl Daemon {
                                         transcribe::create_transcriber(&config)
                                     }));
                                     tracing::debug!("Started background model loading");
+                                } else if let Some(ref t) = transcriber_preloaded {
+                                    // For gpu_isolation mode: prepare the subprocess now
+                                    // (spawns worker and loads model while user speaks)
+                                    let transcriber = t.clone();
+                                    tokio::task::spawn_blocking(move || {
+                                        transcriber.prepare();
+                                    });
                                 }
 
                                 match audio::create_capture(&self.config.audio) {
@@ -844,6 +858,13 @@ impl Daemon {
                             self.model_load_task = Some(tokio::task::spawn_blocking(move || {
                                 transcribe::create_transcriber(&config)
                             }));
+                        } else if let Some(ref t) = transcriber_preloaded {
+                            // For gpu_isolation mode: prepare the subprocess now
+                            // (spawns worker and loads model while user speaks)
+                            let transcriber = t.clone();
+                            tokio::task::spawn_blocking(move || {
+                                transcriber.prepare();
+                            });
                         }
 
                         match audio::create_capture(&self.config.audio) {

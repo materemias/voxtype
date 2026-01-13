@@ -411,6 +411,49 @@ on_demand_loading = true  # Free VRAM when not transcribing
 
 **Performance note:** On modern systems with SSDs, model loading typically takes under 1 second for base/small models. Larger models (medium, large-v3) may take 2-3 seconds to load.
 
+### gpu_isolation
+
+**Type:** Boolean
+**Default:** `false`
+**Required:** No
+
+GPU memory isolation mode. When enabled, transcription runs in a subprocess that exits after each recording, fully releasing GPU memory between transcriptions.
+
+**Values:**
+- `false` (default) - Model stays loaded in the daemon process. Fastest response, but GPU memory is held continuously.
+- `true` - Model loads in a subprocess when recording starts, subprocess exits after transcription. Releases all GPU/VRAM between recordings.
+
+**When to use `gpu_isolation = true`:**
+- Laptops with hybrid graphics (NVIDIA Optimus, AMD switchable)
+- You want the discrete GPU to power down when not transcribing
+- Battery life is a priority
+- You're running other GPU-intensive applications alongside Voxtype
+
+**When to keep default (`false`):**
+- Desktop systems with dedicated GPUs
+- You transcribe frequently and want zero latency
+- Power consumption is not a concern
+
+**Performance impact:**
+
+Benchmarks on AMD Radeon RX 7800 XT with large-v3-turbo:
+
+| Mode | Transcription Latency | Idle RAM | Idle GPU Memory |
+|------|----------------------|----------|-----------------|
+| Standard (`false`) | 0.49s avg | ~1.6 GB | 409 MB |
+| GPU Isolation (`true`) | 0.50s avg | 0 | 0 |
+
+The model loads while you speak (0.38-0.42s), so the additional latency is only ~10ms (2%) after recording stops. The delay should be barely perceptible because model loading overlaps with speaking time.
+
+**Example:**
+```toml
+[whisper]
+model = "large-v3-turbo"
+gpu_isolation = true  # Release GPU memory between transcriptions
+```
+
+**Note:** This setting only applies when using the local whisper backend (`backend = "local"`). It has no effect with remote transcription since no local GPU is used.
+
 ---
 
 ## Remote Backend Settings
@@ -1154,6 +1197,20 @@ on_demand_loading = true  # Free VRAM when not transcribing
 enabled = true  # Helpful feedback since model loading adds brief delay
 theme = "default"
 ```
+
+### Laptop with Hybrid Graphics (GPU Isolation)
+
+```toml
+[whisper]
+model = "large-v3-turbo"
+gpu_isolation = true  # Release GPU memory between transcriptions
+
+[audio.feedback]
+enabled = true
+theme = "default"
+```
+
+GPU isolation runs transcription in a subprocess that exits after each recording, allowing the discrete GPU to power down. The model loads while you speak, so perceived latency is nearly identical to standard mode.
 
 ### Custom Hotkey
 

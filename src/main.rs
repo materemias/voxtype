@@ -17,6 +17,9 @@ async fn main() -> anyhow::Result<()> {
 
     let cli = Cli::parse();
 
+    // Check if this is the worker command (needs stderr-only logging)
+    let is_worker = matches!(cli.command, Some(Commands::TranscribeWorker { .. }));
+
     // Initialize logging
     let log_level = if cli.quiet {
         "error"
@@ -28,13 +31,25 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new(format!("voxtype={},warn", log_level))),
-        )
-        .with_target(false)
-        .init();
+    if is_worker {
+        // Worker uses stderr for logging (stdout is reserved for IPC protocol)
+        tracing_subscriber::fmt()
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .unwrap_or_else(|_| EnvFilter::new(format!("voxtype={},warn", log_level))),
+            )
+            .with_target(false)
+            .with_writer(std::io::stderr)
+            .init();
+    } else {
+        tracing_subscriber::fmt()
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .unwrap_or_else(|_| EnvFilter::new(format!("voxtype={},warn", log_level))),
+            )
+            .with_target(false)
+            .init();
+    }
 
     // Load configuration
     let mut config = config::load_config(cli.config.as_deref())?;
@@ -68,6 +83,31 @@ async fn main() -> anyhow::Result<()> {
 
         Commands::Transcribe { file } => {
             transcribe_file(&config, &file)?;
+        }
+
+        Commands::TranscribeWorker {
+            model,
+            language,
+            translate,
+            threads,
+        } => {
+            // Internal command: run transcription worker process
+            // This is spawned by the daemon when gpu_isolation is enabled
+            // Use command-line overrides if provided, otherwise use config
+            let mut whisper_config = config.whisper.clone();
+            if let Some(m) = model {
+                whisper_config.model = m;
+            }
+            if let Some(l) = language {
+                whisper_config.language = l;
+            }
+            if translate {
+                whisper_config.translate = true;
+            }
+            if let Some(t) = threads {
+                whisper_config.threads = Some(t);
+            }
+            transcribe::worker::run_worker(&whisper_config)?;
         }
 
         Commands::Setup { action, download, model, quiet, no_post_install } => {
