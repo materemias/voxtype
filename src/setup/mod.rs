@@ -73,6 +73,26 @@ pub fn get_voxtype_path() -> String {
         .unwrap_or_else(|_| "voxtype".to_string())
 }
 
+/// Get the voxtype binary path for service files
+///
+/// In tiered mode (DEB/RPM packages), returns /usr/bin/voxtype (the symlink)
+/// so backend switching only requires a service restart rather than regenerating
+/// the service file.
+pub fn get_voxtype_service_path() -> String {
+    const VOXTYPE_BIN: &str = "/usr/bin/voxtype";
+
+    // If /usr/bin/voxtype exists (either as symlink or binary), use it
+    // This allows backend switching to work with just a service restart
+    if std::path::Path::new(VOXTYPE_BIN).exists()
+        || std::fs::symlink_metadata(VOXTYPE_BIN).is_ok()
+    {
+        return VOXTYPE_BIN.to_string();
+    }
+
+    // Fallback to current exe (for non-standard installations)
+    get_voxtype_path()
+}
+
 /// Print a success message
 pub fn print_success(msg: &str) {
     println!("  \x1b[32m✓\x1b[0m {}", msg);
