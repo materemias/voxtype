@@ -70,6 +70,31 @@ async fn main() -> anyhow::Result<()> {
             transcribe_file(&config, &file)?;
         }
 
+        Commands::TranscribeWorker {
+            model,
+            language,
+            translate,
+            threads,
+        } => {
+            // Internal command: run transcription worker process
+            // This is spawned by the daemon when gpu_isolation is enabled
+            // Use command-line overrides if provided, otherwise use config
+            let mut whisper_config = config.whisper.clone();
+            if let Some(m) = model {
+                whisper_config.model = m;
+            }
+            if let Some(l) = language {
+                whisper_config.language = l;
+            }
+            if translate {
+                whisper_config.translate = true;
+            }
+            if let Some(t) = threads {
+                whisper_config.threads = Some(t);
+            }
+            transcribe::worker::run_worker(&whisper_config)?;
+        }
+
         Commands::Setup { action, download, model, quiet, no_post_install } => {
             match action {
                 Some(SetupAction::Check) => {

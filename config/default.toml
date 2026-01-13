@@ -80,6 +80,16 @@ translate = false
 # When false, model is kept in memory for faster response times (default)
 on_demand_loading = false
 
+# GPU memory isolation mode (default: false)
+# When true, transcription runs in a subprocess that exits after each
+# transcription, ensuring GPU memory is fully released between recordings.
+# This is especially useful on laptops with hybrid graphics (NVIDIA Optimus,
+# AMD switchable) to prevent the dGPU from staying active when not in use.
+# Trade-off: Model loads once per transcription (but this overlaps with
+# speaking time, so perceived latency is similar).
+# Note: Only applies when using local whisper backend, not remote.
+# gpu_isolation = true
+
 [output]
 # Primary output mode: "type", "clipboard", or "paste"
 # - type: Simulates keyboard input at cursor position (requires ydotool)

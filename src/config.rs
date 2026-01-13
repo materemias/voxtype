@@ -526,6 +526,15 @@ pub struct WhisperConfig {
     #[serde(default = "default_on_demand_loading")]
     pub on_demand_loading: bool,
 
+    /// Enable GPU memory isolation mode (default: false)
+    /// When true, transcription runs in a subprocess that exits after each
+    /// transcription, ensuring GPU memory is fully released between recordings.
+    /// This is especially useful on laptops with hybrid graphics to prevent
+    /// the GPU from staying active when not in use.
+    /// Note: This option only applies when backend = "local".
+    #[serde(default)]
+    pub gpu_isolation: bool,
+
     // --- Remote backend settings ---
 
     /// Remote server endpoint URL (e.g., "http://192.168.1.100:8080")
@@ -693,6 +702,7 @@ impl Default for Config {
                 translate: false,
                 threads: None,
                 on_demand_loading: default_on_demand_loading(),
+                gpu_isolation: false,
                 remote_endpoint: None,
                 remote_model: None,
                 remote_api_key: None,

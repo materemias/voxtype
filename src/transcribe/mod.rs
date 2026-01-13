@@ -3,9 +3,12 @@
 //! Provides transcription via:
 //! - Local whisper.cpp inference (whisper-rs crate)
 //! - Remote OpenAI-compatible Whisper API (whisper.cpp server, OpenAI, etc.)
+//! - Subprocess isolation for GPU memory release
 
 pub mod remote;
+pub mod subprocess;
 pub mod whisper;
+pub mod worker;
 
 use crate::config::{WhisperBackend, WhisperConfig};
 use crate::error::TranscribeError;
@@ -21,10 +24,27 @@ pub trait Transcriber: Send + Sync {
 pub fn create_transcriber(
     config: &WhisperConfig,
 ) -> Result<Box<dyn Transcriber>, TranscribeError> {
+    create_transcriber_with_config_path(config, None)
+}
+
+/// Factory function to create transcriber with optional config path
+/// The config path is passed to subprocess transcriber for isolated GPU execution
+pub fn create_transcriber_with_config_path(
+    config: &WhisperConfig,
+    config_path: Option<std::path::PathBuf>,
+) -> Result<Box<dyn Transcriber>, TranscribeError> {
     match config.backend {
         WhisperBackend::Local => {
-            tracing::info!("Using local whisper transcription backend");
-            Ok(Box::new(whisper::WhisperTranscriber::new(config)?))
+            if config.gpu_isolation {
+                tracing::info!("Using subprocess-isolated whisper transcription (gpu_isolation=true)");
+                Ok(Box::new(subprocess::SubprocessTranscriber::new(
+                    config,
+                    config_path,
+                )?))
+            } else {
+                tracing::info!("Using local whisper transcription backend");
+                Ok(Box::new(whisper::WhisperTranscriber::new(config)?))
+            }
         }
         WhisperBackend::Remote => {
             tracing::info!("Using remote whisper transcription backend");
