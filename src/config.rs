@@ -1246,4 +1246,59 @@ mod tests {
         assert_eq!(icons.recording, "🔴");
         assert!(icons.transcribing.contains("⏳"));
     }
+
+    #[test]
+    fn test_context_window_optimization_default_true() {
+        // Default config should have context_window_optimization enabled
+        let config = Config::default();
+        assert!(config.whisper.context_window_optimization);
+    }
+
+    #[test]
+    fn test_context_window_optimization_can_be_disabled() {
+        let toml_str = r#"
+            [hotkey]
+            key = "SCROLLLOCK"
+
+            [audio]
+            device = "default"
+            sample_rate = 16000
+            max_duration_secs = 60
+
+            [whisper]
+            model = "base.en"
+            language = "en"
+            context_window_optimization = false
+
+            [output]
+            mode = "type"
+        "#;
+
+        let config: Config = toml::from_str(toml_str).unwrap();
+        assert!(!config.whisper.context_window_optimization);
+    }
+
+    #[test]
+    fn test_context_window_optimization_defaults_when_omitted() {
+        // When not specified in config, should default to true
+        let toml_str = r#"
+            [hotkey]
+            key = "SCROLLLOCK"
+
+            [audio]
+            device = "default"
+            sample_rate = 16000
+            max_duration_secs = 60
+
+            [whisper]
+            model = "base.en"
+            language = "en"
+
+            [output]
+            mode = "type"
+        "#;
+
+        let config: Config = toml::from_str(toml_str).unwrap();
+        assert!(config.whisper.context_window_optimization);
+    }
 }
