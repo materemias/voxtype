@@ -73,6 +73,9 @@ async fn main() -> anyhow::Result<()> {
     if let Some(delay) = cli.wtype_delay {
         config.output.wtype_delay_ms = delay;
     }
+    if cli.no_whisper_context_optimization {
+        config.whisper.context_window_optimization = false;
+    }
 
     // Run the appropriate command
     match cli.command.unwrap_or(Commands::Daemon) {

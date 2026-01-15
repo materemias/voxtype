@@ -84,6 +84,11 @@ on_demand_loading = false
 # Enable on laptops with hybrid graphics to let dGPU sleep between transcriptions.
 # gpu_isolation = true
 
+# Context window optimization for short recordings (enabled by default)
+# Speeds up transcription for clips under 22.5 seconds. Disable only if you
+# experience accuracy issues with short recordings (rare).
+# context_window_optimization = false
+
 [output]
 # Primary output mode: "type", "clipboard", or "paste"
 # - type: Simulates keyboard input at cursor position (requires wtype or ydotool)

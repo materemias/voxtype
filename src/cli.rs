@@ -56,6 +56,10 @@ pub struct Cli {
     #[arg(long, value_name = "MODEL")]
     pub model: Option<String>,
 
+    /// Disable context window optimization for short recordings
+    #[arg(long)]
+    pub no_whisper_context_optimization: bool,
+
     /// Override hotkey (e.g., SCROLLLOCK, PAUSE, F13)
     #[arg(long, value_name = "KEY")]
     pub hotkey: Option<String>,

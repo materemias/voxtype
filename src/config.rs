@@ -300,6 +300,10 @@ fn default_on_demand_loading() -> bool {
     false
 }
 
+fn default_context_window_optimization() -> bool {
+    true
+}
+
 impl Default for AudioFeedbackConfig {
     fn default() -> Self {
         Self {
@@ -535,6 +539,13 @@ pub struct WhisperConfig {
     #[serde(default)]
     pub gpu_isolation: bool,
 
+    /// Optimize context window for short recordings (default: true)
+    /// When enabled, uses a smaller context window proportional to audio length
+    /// for clips under 22.5 seconds. This significantly speeds up transcription
+    /// on both CPU and GPU. If transcription seems unstable, set this to false.
+    #[serde(default = "default_context_window_optimization")]
+    pub context_window_optimization: bool,
+
     // --- Remote backend settings ---
 
     /// Remote server endpoint URL (e.g., "http://192.168.1.100:8080")
@@ -708,6 +719,7 @@ impl Default for Config {
                 threads: None,
                 on_demand_loading: default_on_demand_loading(),
                 gpu_isolation: false,
+                context_window_optimization: default_context_window_optimization(),
                 remote_endpoint: None,
                 remote_model: None,
                 remote_api_key: None,
@@ -1233,5 +1245,60 @@ mod tests {
         assert!(icons.idle.contains("🎙"));
         assert_eq!(icons.recording, "🔴");
         assert!(icons.transcribing.contains("⏳"));
+    }
+
+    #[test]
+    fn test_context_window_optimization_default_true() {
+        // Default config should have context_window_optimization enabled
+        let config = Config::default();
+        assert!(config.whisper.context_window_optimization);
+    }
+
+    #[test]
+    fn test_context_window_optimization_can_be_disabled() {
+        let toml_str = r#"
+            [hotkey]
+            key = "SCROLLLOCK"
+
+            [audio]
+            device = "default"
+            sample_rate = 16000
+            max_duration_secs = 60
+
+            [whisper]
+            model = "base.en"
+            language = "en"
+            context_window_optimization = false
+
+            [output]
+            mode = "type"
+        "#;
+
+        let config: Config = toml::from_str(toml_str).unwrap();
+        assert!(!config.whisper.context_window_optimization);
+    }
+
+    #[test]
+    fn test_context_window_optimization_defaults_when_omitted() {
+        // When not specified in config, should default to true
+        let toml_str = r#"
+            [hotkey]
+            key = "SCROLLLOCK"
+
+            [audio]
+            device = "default"
+            sample_rate = 16000
+            max_duration_secs = 60
+
+            [whisper]
+            model = "base.en"
+            language = "en"
+
+            [output]
+            mode = "type"
+        "#;
+
+        let config: Config = toml::from_str(toml_str).unwrap();
+        assert!(config.whisper.context_window_optimization);
     }
 }
