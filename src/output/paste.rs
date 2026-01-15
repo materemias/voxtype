@@ -456,8 +456,7 @@ impl TextOutput for PasteOutput {
         self.copy_to_clipboard(text).await?;
 
         // Small delay to ensure clipboard is set before pasting
-        // Increased from 100ms to 200ms to improve reliability with ydotool
-        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         // Step 2: Simulate paste keystroke
         self.simulate_paste_keystroke().await?;
