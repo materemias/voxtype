@@ -390,6 +390,28 @@ Building on modern CPUs (Zen 4, etc.) can leak AVX-512/GFNI instructions into bi
 | Vulkan | Docker on remote pre-AVX-512 server | GPU build on CPU without AVX-512 |
 | AVX512 | Local machine | Requires AVX-512 capable host |
 
+### GPU Feature Flags
+
+GPU acceleration is enabled via Cargo features:
+
+| Feature | Backend | Use Case |
+|---------|---------|----------|
+| `gpu-vulkan` | Vulkan | AMD GPUs, Intel GPUs, cross-platform |
+| `gpu-cuda` | CUDA | NVIDIA GPUs |
+| `gpu-hipblas` | ROCm/HIP | AMD GPUs (alternative to Vulkan) |
+| `gpu-metal` | Metal | macOS (not applicable for Linux builds) |
+
+```bash
+# Build with Vulkan GPU support
+cargo build --release --features gpu-vulkan
+
+# Build with CUDA GPU support
+cargo build --release --features gpu-cuda
+
+# Build CPU-only (no GPU feature)
+cargo build --release
+```
+
 ### Remote Docker Context
 
 A remote server with a pre-AVX-512 CPU is ideal for building binaries that must be clean of AVX-512 instructions. Configure a Docker context pointing to this server.
