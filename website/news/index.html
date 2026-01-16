@@ -9,16 +9,16 @@
     <!-- Open Graph / Social Media -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://voxtype.io/news/">
-    <meta property="og:title" content="Voxtype 0.4.15: Consolidated Typing Delays">
-    <meta property="og:description" content="Unified delay options across all output drivers. Tune type_delay_ms and pre_type_delay_ms for your system.">
+    <meta property="og:title" content="Voxtype 0.4.15: Context Optimization, Single-Instance, Delay Options">
+    <meta property="og:description" content="Faster transcription for short recordings, single-instance safeguards, and consolidated typing delay options.">
     <meta property="og:image" content="https://voxtype.io/images/gpu-isolation.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Voxtype 0.4.15: Consolidated Typing Delays">
-    <meta name="twitter:description" content="Unified delay options across all output drivers. Tune type_delay_ms and pre_type_delay_ms for your system.">
+    <meta name="twitter:title" content="Voxtype 0.4.15: Context Optimization, Single-Instance, Delay Options">
+    <meta name="twitter:description" content="Faster transcription for short recordings, single-instance safeguards, and consolidated typing delay options.">
     <meta name="twitter:image" content="https://voxtype.io/images/gpu-isolation.png">
 
     <title>News & Updates | Voxtype</title>
@@ -82,9 +82,27 @@
                     <time datetime="2026-01-16">January 16, 2026</time>
                     <span class="article-tag">Release</span>
                 </div>
-                <h2>v0.4.15: Consolidated Typing Delays</h2>
+                <h2>v0.4.15: Context Optimization, Single-Instance, Delay Options</h2>
                 <div class="article-body">
-                    <p>Voxtype 0.4.15 consolidates typing delay options across all output drivers, making it easier to tune output timing for your system.</p>
+                    <p>Voxtype 0.4.15 brings faster transcription for short recordings, single-instance safeguards, and consolidated typing delay options.</p>
+
+                    <h3>Context Window Optimization</h3>
+                    <p>Short recordings now use an optimized audio context window instead of the default 30-second fixed window. The context size is calculated dynamically based on audio length, speeding up transcription for clips under 22.5 seconds.</p>
+
+                    <p><strong>Why it matters:</strong> A 3-second recording no longer processes as if it were 30 seconds. You'll see faster transcription times without any configuration changes.</p>
+
+                    <div class="code-block">
+                        <pre><code>INFO Audio context optimization: using audio_ctx=204 for 2.82s clip</code></pre>
+                    </div>
+
+                    <p>If you experience accuracy issues with short recordings (rare), disable with <code>context_window_optimization = false</code> in config.</p>
+
+                    <h3>Single-Instance Safeguard</h3>
+                    <p>The daemon now prevents multiple instances from running simultaneously using PID file locking. If a previous instance crashed, the stale lock is automatically cleaned up on next start.</p>
+
+                    <p><strong>Why it matters:</strong> No more accidentally running two daemons and getting duplicate transcriptions or audio conflicts.</p>
+
+                    <p>Thanks to <a href="https://github.com/materemias">@materemias</a> for this contribution.</p>
 
                     <h3>Unified Delay Options</h3>
                     <p>Two delay options now work consistently across wtype, ydotool, and paste mode:</p>
@@ -103,17 +121,7 @@ type_delay_ms = 50        # Slow down inter-keystroke timing
 pre_type_delay_ms = 200   # Wait before typing starts</code></pre>
                     </div>
 
-                    <h3>Deprecation Notice</h3>
-                    <p>The <code>wtype_delay_ms</code> option is now deprecated. It still works but logs a warning. Use <code>pre_type_delay_ms</code> instead, which applies to all output drivers.</p>
-
-                    <h3>Debug Logging</h3>
-                    <p>Output drivers now log the exact commands being executed, making it easier to verify your delay settings are applied correctly:</p>
-
-                    <div class="code-block">
-                        <pre><code>DEBUG Running: wtype -s 200 -d 50 -- "Hello world"
-DEBUG ydotool: sleeping 200ms before typing
-DEBUG Running: ydotool type --key-delay 50 -- "Hello world"</code></pre>
-                    </div>
+                    <p>The <code>wtype_delay_ms</code> option is deprecated but still works with a warning.</p>
 
                 </div>
             </article>
