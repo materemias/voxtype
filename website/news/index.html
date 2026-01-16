@@ -9,16 +9,16 @@
     <!-- Open Graph / Social Media -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://voxtype.io/news/">
-    <meta property="og:title" content="Voxtype 0.4.14: Configurable Paste Keystroke">
-    <meta property="og:description" content="Paste mode now supports custom keystrokes and uses wtype as the primary backend, eliminating the need for ydotoold.">
+    <meta property="og:title" content="Voxtype 0.4.15: Consolidated Typing Delays">
+    <meta property="og:description" content="Unified delay options across all output drivers. Tune type_delay_ms and pre_type_delay_ms for your system.">
     <meta property="og:image" content="https://voxtype.io/images/gpu-isolation.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Voxtype 0.4.14: Configurable Paste Keystroke">
-    <meta name="twitter:description" content="Paste mode now supports custom keystrokes and uses wtype as the primary backend, eliminating the need for ydotoold.">
+    <meta name="twitter:title" content="Voxtype 0.4.15: Consolidated Typing Delays">
+    <meta name="twitter:description" content="Unified delay options across all output drivers. Tune type_delay_ms and pre_type_delay_ms for your system.">
     <meta name="twitter:image" content="https://voxtype.io/images/gpu-isolation.png">
 
     <title>News & Updates | Voxtype</title>
@@ -76,6 +76,47 @@
         <div class="container">
 
             <!-- v0.4.x Era Posts -->
+
+            <article class="news-article" id="v0415">
+                <div class="article-meta">
+                    <time datetime="2026-01-16">January 16, 2026</time>
+                    <span class="article-tag">Release</span>
+                </div>
+                <h2>v0.4.15: Consolidated Typing Delays</h2>
+                <div class="article-body">
+                    <p>Voxtype 0.4.15 consolidates typing delay options across all output drivers, making it easier to tune output timing for your system.</p>
+
+                    <h3>Unified Delay Options</h3>
+                    <p>Two delay options now work consistently across wtype, ydotool, and paste mode:</p>
+
+                    <ul>
+                        <li><code>type_delay_ms</code>: Delay between keystrokes (wtype <code>-d</code>, ydotool <code>--key-delay</code>)</li>
+                        <li><code>pre_type_delay_ms</code>: Delay before typing starts (wtype <code>-s</code>, sleep for others)</li>
+                    </ul>
+
+                    <p><strong>Why use it:</strong> Some applications drop the first character or miss keystrokes when text is typed too quickly. These options let you slow things down without switching output modes.</p>
+
+                    <div class="code-block">
+                        <div class="code-header"><span>config.toml</span></div>
+                        <pre><code>[output]
+type_delay_ms = 50        # Slow down inter-keystroke timing
+pre_type_delay_ms = 200   # Wait before typing starts</code></pre>
+                    </div>
+
+                    <h3>Deprecation Notice</h3>
+                    <p>The <code>wtype_delay_ms</code> option is now deprecated. It still works but logs a warning. Use <code>pre_type_delay_ms</code> instead, which applies to all output drivers.</p>
+
+                    <h3>Debug Logging</h3>
+                    <p>Output drivers now log the exact commands being executed, making it easier to verify your delay settings are applied correctly:</p>
+
+                    <div class="code-block">
+                        <pre><code>DEBUG Running: wtype -s 200 -d 50 -- "Hello world"
+DEBUG ydotool: sleeping 200ms before typing
+DEBUG Running: ydotool type --key-delay 50 -- "Hello world"</code></pre>
+                    </div>
+
+                </div>
+            </article>
 
             <article class="news-article" id="v0414">
                 <div class="article-meta">
