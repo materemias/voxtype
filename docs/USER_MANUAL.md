@@ -234,7 +234,7 @@ translate = false
 
 [output]
 # Primary output mode
-# "type" - Simulates keyboard input at cursor (wtype on Wayland, ydotool on X11)
+# "type" - Simulates keyboard input at cursor (wtype/dotool/ydotool)
 # "clipboard" - Copies text to clipboard (requires wl-copy)
 # "paste" - Copies to clipboard then simulates Ctrl+V (for non-US keyboard layouts)
 mode = "type"
@@ -694,14 +694,24 @@ systemctl --user enable --now ydotool
 
 wtype does not work on all Wayland compositors. KDE Plasma and GNOME do not support the virtual keyboard protocol that wtype requires.
 
-| Desktop | wtype | ydotool | Notes |
-|---------|-------|---------|-------|
-| Hyprland, Sway, River | ✓ | ✓ | wtype recommended (best CJK support) |
-| KDE Plasma (Wayland) | ✗ | ✓ | Use ydotool (daemon required) |
-| GNOME (Wayland) | ✗ | ✓ | Use ydotool (daemon required) |
-| X11 (any) | ✗ | ✓ | Use ydotool (daemon required) |
+| Desktop | wtype | dotool | ydotool | Notes |
+|---------|-------|--------|---------|-------|
+| Hyprland, Sway, River | ✓ | ✓ | ✓ | wtype recommended (best CJK support) |
+| KDE Plasma (Wayland) | ✗ | ✓ | ✓ | dotool recommended (keyboard layout support) |
+| GNOME (Wayland) | ✗ | ✓ | ✓ | dotool recommended (keyboard layout support) |
+| X11 (any) | ✗ | ✓ | ✓ | dotool or ydotool (daemon required for ydotool) |
 
-**KDE Plasma and GNOME users:** You must set up ydotool for type mode to work. Install ydotool and start the daemon:
+**KDE Plasma and GNOME users:** Install dotool (recommended) or set up ydotool for type mode to work.
+
+For dotool (recommended for non-US keyboards):
+```bash
+# Install dotool (check your distribution's package manager)
+# User must be in 'input' group for uinput access
+sudo usermod -aG input $USER
+# Log out and back in for group change to take effect
+```
+
+For ydotool:
 
 ```bash
 systemctl --user enable --now ydotool
@@ -763,7 +773,7 @@ mode = "paste"
 
 ### Fallback Behavior
 
-Voxtype uses a fallback chain: wtype → ydotool → clipboard
+Voxtype uses a fallback chain: wtype → dotool → ydotool → clipboard
 
 ```toml
 [output]
@@ -771,7 +781,7 @@ mode = "type"
 fallback_to_clipboard = true  # Falls back to clipboard if typing fails
 ```
 
-On Wayland, wtype is tried first (best CJK support), then ydotool, then clipboard. On X11, ydotool is used, falling back to clipboard if unavailable.
+On Wayland, wtype is tried first (best CJK support), then dotool (supports keyboard layouts), then ydotool, then clipboard. On X11 or KDE/GNOME Wayland where wtype doesn't work, dotool or ydotool is used, falling back to clipboard if unavailable.
 
 ---
 

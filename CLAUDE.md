@@ -80,7 +80,8 @@ src/
 ├── output/           # Text delivery
 │   ├── mod.rs        # TextOutput trait, factory, fallback chain
 │   ├── wtype.rs      # Wayland-native (best Unicode support)
-│   ├── ydotool.rs    # X11/TTY fallback
+│   ├── dotool.rs     # Keyboard layout support via uinput
+│   ├── ydotool.rs    # X11/TTY fallback (requires daemon)
 │   ├── clipboard.rs  # Universal fallback via wl-copy
 │   ├── paste.rs      # Clipboard + Ctrl+V
 │   └── post_process.rs   # LLM cleanup command
@@ -103,7 +104,7 @@ Each major component defines a trait allowing multiple implementations:
 | `HotkeyListener` | `EvdevListener` | Add libinput, compositor-specific listeners |
 | `AudioCapture` | `CpalCapture` | Add JACK, direct ALSA support |
 | `Transcriber` | `WhisperTranscriber`, `RemoteTranscriber`, `SubprocessTranscriber` | Add new ASR backends |
-| `TextOutput` | `WtypeOutput`, `YdotoolOutput`, `ClipboardOutput` | Add X11, compositor-specific output |
+| `TextOutput` | `WtypeOutput`, `DotoolOutput`, `YdotoolOutput`, `ClipboardOutput` | Add X11, compositor-specific output |
 
 ---
 
@@ -139,9 +140,14 @@ Set `[hotkey] enabled = false` when using compositor keybindings.
 
 ### Output Fallback Chain
 
-**Why:** No single output method works everywhere (wtype needs Wayland, ydotool needs daemon).
+**Why:** No single output method works everywhere (wtype needs Wayland, ydotool needs daemon, dotool needs uinput access).
 
-**Chain:** wtype → ydotool → clipboard
+**Chain:** wtype → dotool → ydotool → clipboard
+
+- **wtype**: Wayland-native, best Unicode/CJK support, no daemon needed
+- **dotool**: Works on X11/Wayland/TTY, supports keyboard layouts via `DOTOOL_XKB_LAYOUT`, no daemon needed
+- **ydotool**: Works on X11/Wayland/TTY, requires ydotoold daemon
+- **clipboard**: Universal fallback via wl-copy
 
 Each method is probed before use; failures cascade to next method.
 
@@ -817,15 +823,13 @@ journalctl --user -u voxtype --since "1 minute ago" | grep -i remote
 
 ### Output Drivers
 
-```bash
-# Test wtype (Wayland native)
-# Should work by default on Wayland
+The output fallback chain is: wtype → dotool → ydotool → clipboard
 
-# Test ydotool fallback (unset WAYLAND_DISPLAY or rename wtype)
-sudo mv /usr/bin/wtype /usr/bin/wtype.bak
+```bash
+# Test wtype (Wayland native, default)
+# Should work by default on Wayland - check logs confirm wtype is used:
 voxtype record start && sleep 2 && voxtype record stop
-journalctl --user -u voxtype --since "30 seconds ago" | grep ydotool
-sudo mv /usr/bin/wtype.bak /usr/bin/wtype
+journalctl --user -u voxtype --since "30 seconds ago" | grep -E "wtype|Text output"
 
 # Test clipboard mode
 # Edit config.toml: mode = "clipboard"
@@ -833,10 +837,93 @@ systemctl --user restart voxtype
 voxtype record start && sleep 2 && voxtype record stop
 wl-paste  # Should show transcribed text
 
-# Test paste mode
+# Test paste mode (clipboard + Ctrl+V)
 # Edit config.toml: mode = "paste"
 systemctl --user restart voxtype
 voxtype record start && sleep 2 && voxtype record stop
+```
+
+### dotool Fallback
+
+Tests the dotool output driver (supports keyboard layouts for non-US keyboards):
+
+```bash
+# Requires: dotool installed, user in 'input' group
+
+# 1. Temporarily hide wtype to force dotool fallback
+sudo mv /usr/bin/wtype /usr/bin/wtype.bak
+
+# 2. Record and transcribe
+voxtype record start && sleep 2 && voxtype record stop
+
+# 3. Check logs for dotool usage:
+journalctl --user -u voxtype --since "30 seconds ago" | grep -E "dotool|Text output"
+# Expected: "wtype not available, trying next" then "Text typed via dotool"
+
+# 4. Restore wtype
+sudo mv /usr/bin/wtype.bak /usr/bin/wtype
+```
+
+### dotool Keyboard Layout
+
+Tests keyboard layout support for non-US keyboards:
+
+```bash
+# 1. Add keyboard layout to config.toml:
+#    [output]
+#    dotool_xkb_layout = "de"        # German layout
+#    dotool_xkb_variant = "nodeadkeys"  # Optional variant
+
+# 2. Hide wtype to force dotool
+sudo mv /usr/bin/wtype /usr/bin/wtype.bak
+
+# 3. Restart daemon and test
+systemctl --user restart voxtype
+voxtype record start && sleep 2 && voxtype record stop
+
+# 4. Verify layout is applied (check dotool receives DOTOOL_XKB_LAYOUT env var):
+journalctl --user -u voxtype --since "30 seconds ago" | grep -i "keyboard layout"
+
+# 5. Restore wtype
+sudo mv /usr/bin/wtype.bak /usr/bin/wtype
+```
+
+### ydotool Fallback
+
+Tests the ydotool output driver (requires ydotoold daemon):
+
+```bash
+# Requires: ydotool installed, ydotoold running
+
+# 1. Temporarily hide wtype and dotool to force ydotool fallback
+sudo mv /usr/bin/wtype /usr/bin/wtype.bak
+sudo mv /usr/bin/dotool /usr/bin/dotool.bak
+
+# 2. Record and transcribe
+voxtype record start && sleep 2 && voxtype record stop
+
+# 3. Check logs for ydotool usage:
+journalctl --user -u voxtype --since "30 seconds ago" | grep -E "ydotool|Text output"
+# Expected: "dotool not available, trying next" then "Text output via ydotool"
+
+# 4. Restore wtype and dotool
+sudo mv /usr/bin/wtype.bak /usr/bin/wtype
+sudo mv /usr/bin/dotool.bak /usr/bin/dotool
+```
+
+### Output Chain Verification
+
+Verify the complete fallback chain works:
+
+```bash
+# Check which output methods are available:
+voxtype config | grep -A10 "Output Chain"
+
+# Expected output shows installed status for each method:
+#   wtype:    ✓ installed
+#   dotool:   ✓ installed (if available)
+#   ydotool:  ✓ installed, daemon running
+#   wl-copy:  ✓ installed
 ```
 
 ### Delay Options

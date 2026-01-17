@@ -9,16 +9,16 @@
     <!-- Open Graph / Social Media -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://voxtype.io/news/">
-    <meta property="og:title" content="Voxtype 0.4.15: Context Optimization, Single-Instance, Delay Options">
-    <meta property="og:description" content="Faster transcription for short recordings, single-instance safeguards, and consolidated typing delay options.">
+    <meta property="og:title" content="Voxtype 0.4.16: dotool Output Driver with Keyboard Layout Support">
+    <meta property="og:description" content="New dotool output driver in the fallback chain, bringing keyboard layout support for non-US keyboards and better KDE/GNOME compatibility.">
     <meta property="og:image" content="https://voxtype.io/images/gpu-isolation.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Voxtype 0.4.15: Context Optimization, Single-Instance, Delay Options">
-    <meta name="twitter:description" content="Faster transcription for short recordings, single-instance safeguards, and consolidated typing delay options.">
+    <meta name="twitter:title" content="Voxtype 0.4.16: dotool Output Driver with Keyboard Layout Support">
+    <meta name="twitter:description" content="New dotool output driver in the fallback chain, bringing keyboard layout support for non-US keyboards and better KDE/GNOME compatibility.">
     <meta name="twitter:image" content="https://voxtype.io/images/gpu-isolation.png">
 
     <title>News & Updates | Voxtype</title>
@@ -76,6 +76,62 @@
         <div class="container">
 
             <!-- v0.4.x Era Posts -->
+
+            <article class="news-article" id="v0416">
+                <div class="article-meta">
+                    <time datetime="2026-01-16">January 16, 2026</time>
+                    <span class="article-tag">Release</span>
+                </div>
+                <h2>v0.4.16: dotool Output Driver with Keyboard Layout Support</h2>
+                <div class="article-body">
+                    <p>Voxtype 0.4.16 adds dotool as a new output driver in the fallback chain, bringing keyboard layout support for non-US keyboards and better compatibility with KDE Plasma and GNOME on Wayland.</p>
+
+                    <h3>New Output Driver: dotool</h3>
+                    <p>The output fallback chain is now wtype → dotool → ydotool → clipboard. dotool sits between wtype and ydotool, providing a daemon-free alternative that works on X11, Wayland, and TTY environments.</p>
+
+                    <p><strong>Why use it:</strong> If you use a non-US keyboard layout (German, French, etc.), dotool can type special characters correctly by setting the XKB layout. Unlike ydotool, dotool doesn't require a daemon to be running.</p>
+
+                    <div class="code-block">
+                        <div class="code-header"><span>config.toml</span></div>
+                        <pre><code>[output]
+dotool_xkb_layout = "de"          # German layout
+dotool_xkb_variant = "nodeadkeys" # Optional variant</code></pre>
+                    </div>
+
+                    <h3>Better KDE Plasma and GNOME Support</h3>
+                    <p>KDE Plasma and GNOME on Wayland don't support the virtual keyboard protocol that wtype requires. Previously, users had to set up ydotool with its daemon. Now dotool provides a simpler alternative that just works if you're in the input group.</p>
+
+                    <p>The fallback chain automatically tries each method:</p>
+                    <ol>
+                        <li><strong>wtype</strong>: Wayland-native, best Unicode/CJK support (fails on KDE/GNOME)</li>
+                        <li><strong>dotool</strong>: Uses uinput, supports keyboard layouts, no daemon needed</li>
+                        <li><strong>ydotool</strong>: Uses uinput, requires ydotoold daemon running</li>
+                        <li><strong>clipboard</strong>: Universal fallback via wl-copy</li>
+                    </ol>
+
+                    <h3>Installation</h3>
+                    <p>dotool is available in most distribution repositories and the AUR:</p>
+
+                    <div class="code-block">
+                        <pre><code># Arch (AUR)
+yay -S dotool
+
+# From source
+git clone https://git.sr.ht/~geb/dotool
+cd dotool && make && sudo make install</code></pre>
+                    </div>
+
+                    <p>Make sure your user is in the <code>input</code> group for uinput access:</p>
+
+                    <div class="code-block">
+                        <pre><code>sudo usermod -aG input $USER
+# Log out and back in</code></pre>
+                    </div>
+
+                    <p>Thanks to <a href="https://github.com/mzubair481">Zubair</a> for contributing the dotool output driver.</p>
+
+                </div>
+            </article>
 
             <article class="news-article" id="v0415">
                 <div class="article-meta">

@@ -558,6 +558,7 @@ We want to hear from you! Voxtype is a young project and your feedback helps mak
 - [robzolkos](https://github.com/robzolkos) - Auto-submit feature for AI agent workflows
 - [konnsim](https://github.com/konnsim) - Modifier key interference bug report
 - [IgorWarzocha](https://github.com/IgorWarzocha) - Hyprland submap solution for modifier key fix
+- [Zubair](https://github.com/mzubair481) - dotool output driver with keyboard layout support
 
 ## License
 

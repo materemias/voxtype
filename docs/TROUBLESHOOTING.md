@@ -295,9 +295,27 @@ This is rarely needed. The optimization speeds up transcription for short clips 
 
 **Cause:** KDE Plasma and GNOME do not implement the `zwp_virtual_keyboard_v1` Wayland protocol that wtype requires. This is a compositor limitation, not a voxtype bug.
 
-**What happens:** Voxtype detects this failure and automatically falls back to ydotool. If ydotool isn't set up, it falls back to clipboard mode.
+**What happens:** Voxtype detects this failure and automatically falls back to dotool, then ydotool. If neither is set up, it falls back to clipboard mode.
 
-**Solution:** Set up ydotool as your typing backend. Unlike wtype, ydotool requires a daemon to be running:
+**Solution 1 (Recommended):** Install dotool. Unlike ydotool, dotool does not require a daemon and supports keyboard layouts for non-US keyboards:
+
+```bash
+# 1. Install dotool (check your distribution's package manager)
+# Arch (AUR):
+yay -S dotool
+# From source: https://sr.ht/~geb/dotool/
+
+# 2. Add user to input group (required for uinput access)
+sudo usermod -aG input $USER
+# Log out and back in for group change to take effect
+
+# 3. Configure keyboard layout if needed (non-US keyboards)
+# Add to config.toml:
+# [output]
+# dotool_xkb_layout = "de"  # German, French ("fr"), etc.
+```
+
+**Solution 2:** Set up ydotool as your typing backend. Unlike dotool, ydotool requires a daemon to be running:
 
 ```bash
 # 1. Install ydotool
@@ -315,7 +333,7 @@ systemctl --user enable --now ydotool
 systemctl --user status ydotool
 ```
 
-**Important:** Simply having ydotool installed is not enough. The daemon must be running for the fallback to work. If the daemon isn't running, voxtype will fall back to clipboard-only output.
+**Important:** For ydotool, simply having it installed is not enough. The daemon must be running for the fallback to work.
 
 **Alternative:** Use clipboard or paste mode instead of type mode:
 
@@ -328,14 +346,14 @@ mode = "paste"      # Copies to clipboard, then simulates Ctrl+V
 
 **Compositor compatibility:**
 
-| Desktop | wtype | ydotool | Recommended |
-|---------|-------|---------|-------------|
-| Hyprland | ✓ | ✓ | wtype |
-| Sway | ✓ | ✓ | wtype |
-| River | ✓ | ✓ | wtype |
-| KDE Plasma (Wayland) | ✗ | ✓ | ydotool |
-| GNOME (Wayland) | ✗ | ✓ | ydotool |
-| X11 (any desktop) | ✗ | ✓ | ydotool |
+| Desktop | wtype | dotool | ydotool | Recommended |
+|---------|-------|--------|---------|-------------|
+| Hyprland | ✓ | ✓ | ✓ | wtype |
+| Sway | ✓ | ✓ | ✓ | wtype |
+| River | ✓ | ✓ | ✓ | wtype |
+| KDE Plasma (Wayland) | ✗ | ✓ | ✓ | dotool |
+| GNOME (Wayland) | ✗ | ✓ | ✓ | dotool |
+| X11 (any desktop) | ✗ | ✓ | ✓ | dotool |
 
 ---
 

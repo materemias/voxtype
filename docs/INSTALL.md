@@ -350,15 +350,24 @@ sudo apt install ydotool
 systemctl --user enable --now ydotool
 ```
 
-**On KDE Plasma or GNOME (Wayland):** wtype does not work on these desktops because they don't support the virtual keyboard protocol. You must use ydotool instead:
+**On KDE Plasma or GNOME (Wayland):** wtype does not work on these desktops because they don't support the virtual keyboard protocol. Install dotool (recommended) or use ydotool:
 
+For dotool (recommended, supports keyboard layouts):
+```bash
+# Install dotool (check your distribution's package manager or AUR)
+# Add user to input group for uinput access
+sudo usermod -aG input $USER
+# Log out and back in
+```
+
+For ydotool:
 ```bash
 # Install ydotool (see commands above for your distro)
 # Then enable and start the daemon (required!)
 systemctl --user enable --now ydotool
 ```
 
-Voxtype uses wtype on Wayland (no daemon needed), ydotool on X11, and falls back to clipboard if neither is available. On KDE/GNOME Wayland, wtype will fail and voxtype will use ydotool if the daemon is running.
+Voxtype uses wtype on Wayland (no daemon needed), with dotool and ydotool as fallbacks, and clipboard as the last resort. On KDE/GNOME Wayland, wtype will fail and voxtype will use dotool or ydotool.
 
 ### 3. Verify audio setup
 
@@ -466,7 +475,7 @@ voxtype setup
 This checks:
 - [x] User in `input` group
 - [x] Audio system accessible
-- [x] wtype or ydotool available (optional)
+- [x] wtype, dotool, or ydotool available (optional)
 - [x] Whisper model downloaded
 - [x] Configuration valid
 

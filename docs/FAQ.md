@@ -25,7 +25,7 @@ Voxtype is designed to:
 
 ### Does it work on X11?
 
-Yes! Voxtype works on both Wayland and X11. It uses evdev (kernel-level) for hotkey detection, which works everywhere. For text output, it uses wtype on Wayland (with CJK support) and ydotool on X11.
+Yes! Voxtype works on both Wayland and X11. It uses evdev (kernel-level) for hotkey detection, which works everywhere. For text output, it uses wtype on Wayland (with CJK support), with dotool and ydotool as fallbacks.
 
 ### Does it require an internet connection?
 
@@ -45,6 +45,7 @@ All of them! Voxtype is optimized for Wayland compositors with native keybinding
 
 For text output, Voxtype uses:
 - **wtype** on Wayland (best CJK/Unicode support, no daemon needed)
+- **dotool** as fallback (supports keyboard layouts, no daemon needed)
 - **ydotool** on X11 or as fallback (requires daemon)
 
 ### Which audio systems are supported?
@@ -70,14 +71,21 @@ For **clipboard mode**: Works universally (you just need to paste manually).
 
 No. KDE Plasma and GNOME (on Wayland) do not support the virtual keyboard protocol that wtype requires. You'll see the error: "Compositor does not support the virtual keyboard protocol."
 
-**Solution:** Use ydotool instead. Voxtype automatically falls back to ydotool when wtype fails, but ydotool requires its daemon to be running:
+**Solution:** Install dotool (recommended) or use ydotool. Voxtype automatically falls back to dotool, then ydotool, when wtype fails.
 
+For dotool (recommended, supports keyboard layouts):
 ```bash
-# Install ydotool, then start the daemon
+# Install dotool and add user to input group
+sudo usermod -aG input $USER
+# Log out and back in
+```
+
+For ydotool (requires daemon):
+```bash
 systemctl --user enable --now ydotool
 ```
 
-Without the daemon running, you'll only get clipboard output. See [Troubleshooting](TROUBLESHOOTING.md#wtype-not-working-on-kde-plasma-or-gnome-wayland) for complete setup instructions.
+See [Troubleshooting](TROUBLESHOOTING.md#wtype-not-working-on-kde-plasma-or-gnome-wayland) for complete setup instructions.
 
 ---
 
@@ -177,10 +185,11 @@ You can also override individual icons or create custom theme files. See the [Wa
 
 The `input` group is only required if you use voxtype's built-in evdev hotkey (e.g., on X11 or GNOME/KDE). The evdev subsystem requires read access to `/dev/input/event*` devices, which is restricted to the `input` group for security reasons.
 
-### Why does it need wtype/ydotool?
+### Why does it need wtype/dotool/ydotool?
 
-Neither Wayland nor X11 provide a universal way for applications to simulate keyboard input. Voxtype uses:
+Neither Wayland nor X11 provide a universal way for applications to simulate keyboard input. Voxtype uses a fallback chain:
 - **wtype** on Wayland - uses the virtual-keyboard protocol, supports CJK characters, no daemon needed
+- **dotool** as fallback - uses the kernel's uinput interface, supports keyboard layouts, no daemon needed
 - **ydotool** on X11 (or Wayland fallback) - uses the kernel's uinput interface, requires a daemon
 
 ### How much RAM does it use?

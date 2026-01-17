@@ -5,7 +5,7 @@
 //! - Capturing audio via cpal (supports PipeWire, PulseAudio, ALSA)
 //! - Transcribing speech using whisper.cpp (fast, local, offline)
 //! - Processing text (punctuation, replacements, optional LLM post-processing)
-//! - Outputting text via wtype/ydotool/clipboard fallback chain
+//! - Outputting text via wtype/dotool/ydotool/clipboard fallback chain
 //!
 //! # Architecture
 //!
@@ -57,8 +57,8 @@
 //!                                            ▼
 //!                                   ┌──────────────┐
 //!                                   │    Output    │
-//!                                   │ wtype/ydotool│
-//!                                   │  /clipboard  │
+//!                                   │wtype/dotool/ │
+//!                                   │ydotool/clip  │
 //!                                   └──────────────┘
 //!                                            │
 //!                                            ▼
