@@ -5,7 +5,7 @@
 
 use crate::audio::feedback::{AudioFeedback, SoundEvent};
 use crate::audio::{self, AudioCapture};
-use crate::config::{ActivationMode, Config, OutputMode};
+use crate::config::{ActivationMode, Config, FileMode, OutputMode};
 use crate::error::Result;
 use crate::hotkey::{self, HotkeyEvent};
 use crate::output;
@@ -115,13 +115,22 @@ fn cleanup_cancel_file() {
 
 /// Read and consume the output mode override file
 /// Returns the override mode if the file exists and is valid, None otherwise
-fn read_output_mode_override() -> Option<OutputMode> {
+/// Output mode override result, which may include a file path for file mode
+#[derive(Debug, PartialEq)]
+enum OutputOverride {
+    Mode(OutputMode),
+    FileWithPath(PathBuf),
+}
+
+/// Read and consume the output mode override file
+/// Format: "type", "clipboard", "paste", "file", or "file:/path/to/file.txt"
+fn read_output_mode_override() -> Option<OutputOverride> {
     let override_file = Config::runtime_dir().join("output_mode_override");
     if !override_file.exists() {
         return None;
     }
 
-    let mode_str = match std::fs::read_to_string(&override_file) {
+    let content = match std::fs::read_to_string(&override_file) {
         Ok(s) => s,
         Err(e) => {
             tracing::warn!("Failed to read output mode override file: {}", e);
@@ -134,18 +143,35 @@ fn read_output_mode_override() -> Option<OutputMode> {
         tracing::warn!("Failed to remove output mode override file: {}", e);
     }
 
-    match mode_str.trim() {
+    let trimmed = content.trim();
+
+    // Check for file mode with path: "file:/path/to/file.txt"
+    if let Some(path) = trimmed.strip_prefix("file:") {
+        let path = path.trim();
+        if path.is_empty() {
+            tracing::warn!("Output mode override 'file:' has empty path");
+            return Some(OutputOverride::Mode(OutputMode::File));
+        }
+        tracing::info!("Using output mode override: file with path {:?}", path);
+        return Some(OutputOverride::FileWithPath(PathBuf::from(path)));
+    }
+
+    match trimmed {
         "type" => {
             tracing::info!("Using output mode override: type");
-            Some(OutputMode::Type)
+            Some(OutputOverride::Mode(OutputMode::Type))
         }
         "clipboard" => {
             tracing::info!("Using output mode override: clipboard");
-            Some(OutputMode::Clipboard)
+            Some(OutputOverride::Mode(OutputMode::Clipboard))
         }
         "paste" => {
             tracing::info!("Using output mode override: paste");
-            Some(OutputMode::Paste)
+            Some(OutputOverride::Mode(OutputMode::Paste))
+        }
+        "file" => {
+            tracing::info!("Using output mode override: file (using config path)");
+            Some(OutputOverride::Mode(OutputMode::File))
         }
         other => {
             tracing::warn!("Invalid output mode override: {:?}", other);
@@ -158,6 +184,45 @@ fn read_output_mode_override() -> Option<OutputMode> {
 fn cleanup_output_mode_override() {
     let override_file = Config::runtime_dir().join("output_mode_override");
     let _ = std::fs::remove_file(&override_file);
+}
+
+/// Write transcription to a file, respecting file_mode (overwrite or append)
+async fn write_transcription_to_file(
+    path: &std::path::Path,
+    text: &str,
+    file_mode: &FileMode,
+) -> std::io::Result<()> {
+    use tokio::io::AsyncWriteExt;
+
+    // Create parent directories if needed
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+    }
+
+    // Ensure text ends with newline
+    let output_text = if text.ends_with('\n') {
+        text.to_string()
+    } else {
+        format!("{}\n", text)
+    };
+
+    match file_mode {
+        FileMode::Overwrite => {
+            tokio::fs::write(path, output_text).await?;
+        }
+        FileMode::Append => {
+            let mut file = tokio::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(path)
+                .await?;
+            file.write_all(output_text.as_bytes()).await?;
+        }
+    }
+
+    Ok(())
 }
 
 /// Result type for transcription task
@@ -362,13 +427,68 @@ impl Daemon {
                         processed_text
                     };
 
-                    // Create output chain with potential override
-                    let output_config = if let Some(mode_override) = read_output_mode_override() {
-                        let mut config = self.config.output.clone();
-                        config.mode = mode_override;
-                        config
-                    } else {
-                        self.config.output.clone()
+                    // Check for output mode override from CLI flags
+                    let output_override = read_output_mode_override();
+
+                    // Determine file output path (if file mode)
+                    // Priority: 1. CLI --file=path, 2. CLI --file (config path), 3. config mode=file
+                    let file_output_path: Option<PathBuf> = match &output_override {
+                        Some(OutputOverride::FileWithPath(path)) => {
+                            // CLI --file=path.txt
+                            Some(path.clone())
+                        }
+                        Some(OutputOverride::Mode(OutputMode::File)) => {
+                            // CLI --file (no path) - use config's file_path
+                            self.config.output.file_path.clone()
+                        }
+                        None if self.config.output.mode == OutputMode::File => {
+                            // Config mode = "file" (no CLI override)
+                            self.config.output.file_path.clone()
+                        }
+                        _ => None,
+                    };
+
+                    if let Some(output_path) = file_output_path {
+                        *state = State::Outputting {
+                            text: final_text.clone(),
+                        };
+
+                        let file_mode = &self.config.output.file_mode;
+                        match write_transcription_to_file(&output_path, &final_text, file_mode).await
+                        {
+                            Ok(()) => {
+                                let mode_str = match file_mode {
+                                    FileMode::Overwrite => "wrote",
+                                    FileMode::Append => "appended",
+                                };
+                                tracing::info!(
+                                    "{} transcription to {:?}",
+                                    mode_str,
+                                    output_path
+                                );
+                            }
+                            Err(e) => {
+                                tracing::error!(
+                                    "Failed to write transcription to {:?}: {}",
+                                    output_path,
+                                    e
+                                );
+                            }
+                        }
+
+                        *state = State::Idle;
+                        self.update_state("idle");
+                        return;
+                    }
+
+                    // Create output chain with potential mode override (for non-file modes)
+                    let output_config = match output_override {
+                        Some(OutputOverride::Mode(mode)) => {
+                            let mut config = self.config.output.clone();
+                            config.mode = mode;
+                            config
+                        }
+                        _ => self.config.output.clone(),
                     };
                     let output_chain = output::create_output_chain(&output_config);
 
@@ -1159,6 +1279,22 @@ mod tests {
     }
 
     #[test]
+    fn test_output_mode_override_file_with_path() {
+        with_test_runtime_dir(|dir| {
+            let override_file = dir.join("output_mode_override");
+
+            // Test "file:/path/to/file.txt" format
+            fs::write(&override_file, "file:/tmp/output.txt").unwrap();
+            let content = fs::read_to_string(&override_file).unwrap();
+            let trimmed = content.trim();
+
+            assert!(trimmed.starts_with("file:"));
+            let path = trimmed.strip_prefix("file:").unwrap();
+            assert_eq!(path, "/tmp/output.txt");
+        });
+    }
+
+    #[test]
     fn test_output_mode_override_file_consumed_after_read() {
         with_test_runtime_dir(|dir| {
             let override_file = dir.join("output_mode_override");
@@ -1186,6 +1322,7 @@ mod tests {
                 "type" => Some(OutputMode::Type),
                 "clipboard" => Some(OutputMode::Clipboard),
                 "paste" => Some(OutputMode::Paste),
+                "file" => Some(OutputMode::File),
                 _ => None,
             };
             assert_eq!(result, Some(OutputMode::Clipboard));
@@ -1210,8 +1347,7 @@ mod tests {
             // Should not panic
         });
     }
-
-    #[test]
+  
     fn test_pidlock_acquisition_succeeds() {
         with_test_runtime_dir(|dir| {
             let lock_path = dir.join("voxtype.lock");
