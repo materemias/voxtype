@@ -380,13 +380,31 @@ mkdir -p "$STAGING"/usr/share/{bash-completion/completions,zsh/site-functions,fi
 # Copy binaries to /usr/lib/voxtype/
 # The post-install script will create a symlink at /usr/bin/voxtype
 if [[ "$TARGET_ARCH" == "x86_64" ]]; then
-    # x86_64: Tiered CPU binaries + Vulkan GPU binary
+    # x86_64: Tiered CPU binaries + Vulkan GPU binary (Whisper)
     cp "${RELEASE_DIR}/voxtype-${VERSION}-linux-x86_64-avx2" "$STAGING/usr/lib/voxtype/voxtype-avx2"
     cp "${RELEASE_DIR}/voxtype-${VERSION}-linux-x86_64-avx512" "$STAGING/usr/lib/voxtype/voxtype-avx512"
     cp "${RELEASE_DIR}/voxtype-${VERSION}-linux-x86_64-vulkan" "$STAGING/usr/lib/voxtype/voxtype-vulkan"
     chmod 755 "$STAGING/usr/lib/voxtype/voxtype-avx2"
     chmod 755 "$STAGING/usr/lib/voxtype/voxtype-avx512"
     chmod 755 "$STAGING/usr/lib/voxtype/voxtype-vulkan"
+
+    # x86_64: Parakeet binaries (ONNX-based alternative engine)
+    if [[ -f "${RELEASE_DIR}/voxtype-${VERSION}-linux-x86_64-parakeet-avx2" ]]; then
+        cp "${RELEASE_DIR}/voxtype-${VERSION}-linux-x86_64-parakeet-avx2" "$STAGING/usr/lib/voxtype/voxtype-parakeet-avx2"
+        chmod 755 "$STAGING/usr/lib/voxtype/voxtype-parakeet-avx2"
+    fi
+    if [[ -f "${RELEASE_DIR}/voxtype-${VERSION}-linux-x86_64-parakeet-avx512" ]]; then
+        cp "${RELEASE_DIR}/voxtype-${VERSION}-linux-x86_64-parakeet-avx512" "$STAGING/usr/lib/voxtype/voxtype-parakeet-avx512"
+        chmod 755 "$STAGING/usr/lib/voxtype/voxtype-parakeet-avx512"
+    fi
+    if [[ -f "${RELEASE_DIR}/voxtype-${VERSION}-linux-x86_64-parakeet-cuda" ]]; then
+        cp "${RELEASE_DIR}/voxtype-${VERSION}-linux-x86_64-parakeet-cuda" "$STAGING/usr/lib/voxtype/voxtype-parakeet-cuda"
+        chmod 755 "$STAGING/usr/lib/voxtype/voxtype-parakeet-cuda"
+    fi
+    if [[ -f "${RELEASE_DIR}/voxtype-${VERSION}-linux-x86_64-parakeet-rocm" ]]; then
+        cp "${RELEASE_DIR}/voxtype-${VERSION}-linux-x86_64-parakeet-rocm" "$STAGING/usr/lib/voxtype/voxtype-parakeet-rocm"
+        chmod 755 "$STAGING/usr/lib/voxtype/voxtype-parakeet-rocm"
+    fi
 else
     # aarch64: Single binary
     cp "${RELEASE_DIR}/voxtype-${VERSION}-linux-aarch64" "$STAGING/usr/lib/voxtype/voxtype"
@@ -487,11 +505,14 @@ echo "     sudo usermod -aG input \$USER"
 echo ""
 echo "  2. Log out and back in for group changes to take effect"
 echo ""
-echo "  3. Download a whisper model:"
-echo "     voxtype setup --download"
+echo "  3. Download a model (Whisper or Parakeet):"
+echo "     voxtype setup model"
 echo ""
 echo "  4. Start voxtype:"
 echo "     systemctl --user enable --now voxtype"
+echo ""
+echo "  Optional: Switch to Parakeet engine (faster, lower memory):"
+echo "     voxtype setup parakeet --enable"
 echo ""
 POSTINST
 else
