@@ -8,7 +8,7 @@ use clap::Parser;
 use std::path::PathBuf;
 use std::process::Command;
 use tracing_subscriber::EnvFilter;
-use voxtype::{config, cpu, daemon, setup, transcribe, Cli, Commands, RecordAction, SetupAction};
+use voxtype::{config, cpu, daemon, setup, transcribe, vad, Cli, Commands, RecordAction, SetupAction};
 
 /// Parse a comma-separated list of driver names into OutputDriver vec
 fn parse_driver_order(s: &str) -> Result<Vec<config::OutputDriver>, String> {
@@ -551,8 +551,29 @@ fn transcribe_file(config: &config::Config, path: &PathBuf) -> anyhow::Result<()
         final_samples.len() as f32 / 16000.0
     );
 
+    // Run VAD if enabled
+    if let Ok(Some(vad)) = vad::create_vad(config) {
+        match vad.detect(&final_samples) {
+            Ok(result) => {
+                println!(
+                    "VAD: {:.2}s speech ({:.1}% of audio)",
+                    result.speech_duration_secs,
+                    result.speech_ratio * 100.0
+                );
+                if !result.has_speech {
+                    println!("No speech detected, skipping transcription.");
+                    return Ok(());
+                }
+            }
+            Err(e) => {
+                eprintln!("VAD warning: {}", e);
+                // Continue with transcription if VAD fails
+            }
+        }
+    }
+
     // Create transcriber and transcribe
-    let transcriber = transcribe::create_transcriber(&config)?;
+    let transcriber = transcribe::create_transcriber(config)?;
     let text = transcriber.transcribe(&final_samples)?;
 
     println!("\n{}", text);
