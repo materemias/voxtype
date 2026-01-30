@@ -9,16 +9,16 @@
     <!-- Open Graph / Social Media -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://voxtype.io/news/">
-    <meta property="og:title" content="Voxtype 0.5.0: Multi-model, Parakeet Engine, Profiles, and More">
-    <meta property="og:description" content="Major release with multi-model support, experimental Parakeet engine, named profiles for post-processing, and customizable output drivers.">
+    <meta property="og:title" content="Voxtype 0.5.5: Native GNOME/KDE Support, Media Keys">
+    <meta property="og:description" content="Native text input for GNOME and KDE Wayland via libei protocol, plus media keys and numeric keycodes for hotkey configuration.">
     <meta property="og:image" content="https://voxtype.io/images/gpu-isolation.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Voxtype 0.5.0: Multi-model, Parakeet Engine, Profiles, and More">
-    <meta name="twitter:description" content="Major release with multi-model support, experimental Parakeet engine, named profiles for post-processing, and customizable output drivers.">
+    <meta name="twitter:title" content="Voxtype 0.5.5: Native GNOME/KDE Support, Media Keys">
+    <meta name="twitter:description" content="Native text input for GNOME and KDE Wayland via libei protocol, plus media keys and numeric keycodes for hotkey configuration.">
     <meta name="twitter:image" content="https://voxtype.io/images/gpu-isolation.png">
 
     <title>News & Updates | Voxtype</title>
@@ -76,6 +76,58 @@
         <div class="container">
 
             <!-- v0.5.x Era Posts -->
+
+            <article class="news-article" id="v055">
+                <div class="article-meta">
+                    <time datetime="2026-01-30">January 30, 2026</time>
+                    <span class="article-tag">Release</span>
+                </div>
+                <h2>v0.5.5: Native GNOME/KDE Support, Media Keys</h2>
+                <div class="article-body">
+                    <p>Voxtype 0.5.5 adds native text input for GNOME and KDE Wayland users via the libei protocol, plus support for media keys and numeric keycodes for hotkey configuration.</p>
+
+                    <h3>eitype Output Driver for GNOME and KDE</h3>
+                    <p>GNOME and KDE Wayland don't support the virtual-keyboard protocol that wtype uses. Previously, users on these desktops had to fall back to dotool or ydotool. Now voxtype can use <a href="https://github.com/Adam-D-Lewis/eitype">eitype</a>, which speaks the native libei/EI protocol supported by Mutter and KWin.</p>
+
+                    <p><strong>Why use it:</strong> If you're on GNOME or KDE Wayland and want typing to work without dotool/ydotool workarounds, install eitype and it will be used automatically.</p>
+
+                    <div class="code-block">
+                        <div class="code-header"><span>Install eitype</span></div>
+                        <pre><code>cargo install eitype</code></pre>
+                    </div>
+
+                    <p>The fallback chain is now: wtype → eitype → dotool → ydotool → clipboard. You can also force eitype explicitly:</p>
+
+                    <div class="code-block">
+                        <div class="code-header"><span>config.toml</span></div>
+                        <pre><code>[output]
+driver_order = ["eitype", "dotool", "clipboard"]</code></pre>
+                    </div>
+
+                    <h3>Media Keys and Numeric Keycodes</h3>
+                    <p>You can now use media keys as your push-to-talk hotkey: <code>MEDIA</code>, <code>RECORD</code>, <code>REWIND</code>, and <code>FASTFORWARD</code>. For keys not in the built-in list, you can specify numeric keycodes with a prefix indicating the source tool.</p>
+
+                    <p><strong>Why use it:</strong> Some keyboards have dedicated media or macro keys that make great push-to-talk buttons. The numeric keycode support means any key your kernel recognizes can be used.</p>
+
+                    <div class="code-block">
+                        <div class="code-header"><span>config.toml</span></div>
+                        <pre><code>[hotkey]
+# Use a named media key
+key = "MEDIA"
+
+# Or use a numeric keycode from wev/xev (XKB keycode)
+key = "WEV_234"
+
+# Or from evtest (kernel keycode)
+key = "EVTEST_226"</code></pre>
+                    </div>
+
+                    <p>The prefix is required because wev/xev and evtest report different numbers for the same key (XKB keycodes are offset by 8 from kernel keycodes).</p>
+
+                    <h3>Contributor</h3>
+                    <p>Thanks to <a href="https://github.com/lokkju">Loki Coyote</a> for both features in this release.</p>
+                </div>
+            </article>
 
             <article class="news-article" id="v050">
                 <div class="article-meta">
