@@ -99,6 +99,8 @@ clap = { version = "4", features = ["derive"] }
 clap_mangen = "0.2"
 
 [dev-dependencies]
+hound = "3.5"
+dirs = "5.0"
 
 [profile.release]
 lto = true
