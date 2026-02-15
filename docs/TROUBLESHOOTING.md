@@ -102,6 +102,89 @@ The automatic fix (`voxtype setup compositor`) only works on compositors that su
 
 ---
 
+## Hotkey Detection on KDE Plasma
+
+### Meta+modifier hotkeys not detected (evdev mode)
+
+**Symptoms:** When using evdev hotkey detection (`[hotkey] enabled = true`) on KDE Plasma, hotkeys like Meta+Shift, Meta+Ctrl, or Meta+Alt are not detected. Voxtype shows no events in debug logs when these keys are pressed. Non-modifier keys with Meta work fine (e.g., Meta+RightAlt).
+
+**Example:**
+```toml
+[hotkey]
+enabled = true
+key = "LEFTSHIFT"
+modifiers = ["LEFTMETA"]
+```
+
+Pressing Meta+Shift produces no debug output. Changing to `key = "RIGHTALT"` with the same modifiers works correctly.
+
+**Cause:** KDE Plasma grabs Meta+modifier combinations (Meta+Shift, Meta+Ctrl, Meta+Alt) at the compositor level for desktop switching, window management, and other shortcuts. The compositor handles these key combinations before they reach evdev, preventing voxtype from receiving the events. This is compositor behavior, not a voxtype bug.
+
+The kernel delivers these events correctly (visible via `sudo evtest`), but KDE prevents them from reaching applications using evdev.
+
+**Workarounds:**
+
+**1. Use compositor keybindings instead of evdev (recommended)**
+
+Disable evdev hotkey detection and bind voxtype commands directly in KDE System Settings:
+
+```toml
+[hotkey]
+enabled = false  # Disable evdev, use compositor bindings instead
+```
+
+Then set up KDE shortcuts:
+1. Open System Settings → Shortcuts → Custom Shortcuts
+2. Create a new shortcut for `voxtype record toggle`
+3. Assign it to your desired key combination (e.g., Meta+Shift)
+
+This approach works reliably because the compositor processes the hotkey before any grabbing happens.
+
+**2. Disable conflicting KDE shortcuts**
+
+If you want to use evdev mode, remove KDE shortcuts that use your target hotkey:
+
+1. Open System Settings → Shortcuts
+2. Search for shortcuts using Meta+Shift (or your target combination)
+3. Disable or rebind conflicting shortcuts
+4. Test with `voxtype -vv` to verify events are received
+
+**3. Use non-modifier target keys**
+
+Keys like F13-F24, ScrollLock, or Pause are not grabbed by KDE:
+
+```toml
+[hotkey]
+enabled = true
+key = "SCROLLLOCK"
+modifiers = ["LEFTMETA"]  # Meta+ScrollLock works
+```
+
+Or use a single non-modifier key without any modifiers:
+
+```toml
+[hotkey]
+enabled = true
+key = "SCROLLLOCK"  # No modifiers needed
+```
+
+**4. Use Alt+Shift with correct key ordering**
+
+On KDE, Alt+Shift has strict ordering requirements. This configuration works reliably:
+
+```toml
+[hotkey]
+enabled = true
+key = "LEFTALT"
+modifiers = ["LEFTSHIFT"]  # Press Shift first, then Alt
+```
+
+Press Shift first, then Alt while holding Shift. This avoids KDE keyboard layout switching and works consistently.
+
+**Note:** This is not a voxtype limitation. Any application using evdev on KDE Plasma will experience the same behavior with Meta+modifier hotkeys. The compositor keybinding approach is the most reliable solution on KDE.
+
+---
+
 ## Permission Issues
 
 ### "Cannot open input device" or "Permission denied"
