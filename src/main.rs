@@ -329,6 +329,14 @@ async fn main() -> anyhow::Result<()> {
                     warn_if_root("compositor");
                     setup::compositor::run(&compositor_type).await?;
                 }
+                Some(SetupAction::Vad { status }) => {
+                    warn_if_root("vad");
+                    if status {
+                        setup::vad::show_status();
+                    } else {
+                        setup::vad::download_model()?;
+                    }
+                }
                 None => {
                     // Default: run setup (non-blocking)
                     warn_if_root("");

@@ -468,6 +468,13 @@ pub enum SetupAction {
         #[command(subcommand)]
         compositor_type: CompositorType,
     },
+
+    /// Download the Silero VAD model for speech detection
+    Vad {
+        /// Show VAD model status
+        #[arg(long)]
+        status: bool,
+    },
 }
 
 #[derive(Subcommand)]

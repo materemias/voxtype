@@ -15,6 +15,7 @@ pub mod gpu;
 pub mod model;
 pub mod parakeet;
 pub mod systemd;
+pub mod vad;
 pub mod waybar;
 
 use crate::config::Config;
