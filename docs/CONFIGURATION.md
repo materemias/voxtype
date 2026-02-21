@@ -1227,18 +1227,18 @@ restore_clipboard = true  # Preserve original clipboard content
 ### restore_clipboard_delay_ms
 
 **Type:** Integer
-**Default:** `50`
+**Default:** `200`
 **Required:** No
 **Applies to:** Paste mode only (when `restore_clipboard = true`)
 
-Delay in milliseconds after the paste keystroke before restoring the original clipboard content. Increase this if the restoration happens too quickly and interferes with the paste operation.
+Delay in milliseconds after the paste keystroke before restoring the original clipboard content. Increase this if the restoration happens too quickly and interferes with the paste operation. The default of 200ms works well for most applications including Electron apps (Slack, Discord, VS Code).
 
 **Example:**
 ```toml
 [output]
 mode = "paste"
 restore_clipboard = true
-restore_clipboard_delay_ms = 100  # Longer delay for slower systems
+restore_clipboard_delay_ms = 300  # Longer delay for slower systems
 ```
 
 ### fallback_to_clipboard

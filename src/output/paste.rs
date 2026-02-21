@@ -157,10 +157,19 @@ fn key_name_to_evdev(name: &str) -> Result<u16, String> {
 }
 
 /// Clipboard content with MIME type for restoration
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 struct ClipboardContent {
     data: Vec<u8>,
     mime_type: String,
+}
+
+impl std::fmt::Debug for ClipboardContent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ClipboardContent")
+            .field("mime_type", &self.mime_type)
+            .field("data", &format!("[{} bytes]", self.data.len()))
+            .finish()
+    }
 }
 
 /// Paste-based text output (clipboard + paste keystroke)
@@ -325,6 +334,15 @@ impl PasteOutput {
             return Ok(None);
         }
 
+        const MAX_CLIPBOARD_SIZE: usize = 100 * 1024 * 1024; // 100 MB
+        if content_output.stdout.len() > MAX_CLIPBOARD_SIZE {
+            tracing::warn!(
+                "Clipboard content too large ({} bytes), skipping restoration",
+                content_output.stdout.len()
+            );
+            return Ok(None);
+        }
+
         Ok(Some(ClipboardContent {
             data: content_output.stdout,
             mime_type,
@@ -358,12 +376,21 @@ impl PasteOutput {
             return Ok(None);
         }
 
+        const MAX_CLIPBOARD_SIZE: usize = 100 * 1024 * 1024; // 100 MB
+        if output.stdout.len() > MAX_CLIPBOARD_SIZE {
+            tracing::warn!(
+                "Clipboard content too large ({} bytes), skipping restoration",
+                output.stdout.len()
+            );
+            return Ok(None);
+        }
+
         // xclip doesn't provide MIME type, assume text/plain or infer from content
         let mime_type = if output.stdout.is_empty() {
             return Ok(None);
         } else {
             // Try to detect if it's text or binary
-            match String::from_utf8(output.stdout.clone()) {
+            match std::str::from_utf8(&output.stdout) {
                 Ok(_) => "text/plain".to_string(),
                 Err(_) => "application/octet-stream".to_string(),
             }
@@ -728,22 +755,20 @@ impl TextOutput for PasteOutput {
             self.send_enter().await?;
         }
 
-        // Restore original clipboard content if enabled and we saved something
-        if self.restore_clipboard {
-            if let Some(content) = original_clipboard {
-                // Wait for paste to complete before restoring
-                tokio::time::sleep(std::time::Duration::from_millis(
-                    self.restore_clipboard_delay_ms as u64,
-                ))
-                .await;
+        // Restore original clipboard content if we saved something
+        if let Some(content) = original_clipboard {
+            // Wait for paste to complete before restoring
+            tokio::time::sleep(std::time::Duration::from_millis(
+                self.restore_clipboard_delay_ms as u64,
+            ))
+            .await;
 
-                match self.restore_clipboard_content(&content).await {
-                    Ok(()) => {
-                        tracing::debug!("Restored original clipboard content");
-                    }
-                    Err(e) => {
-                        tracing::warn!("Failed to restore clipboard content: {}", e);
-                    }
+            match self.restore_clipboard_content(&content).await {
+                Ok(()) => {
+                    tracing::debug!("Restored original clipboard content");
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to restore clipboard content: {}", e);
                 }
             }
         }
@@ -800,5 +825,36 @@ impl TextOutput for PasteOutput {
 
     fn name(&self) -> &'static str {
         "paste (clipboard + keystroke)"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_stores_restore_clipboard_fields() {
+        let output = PasteOutput::new(false, None, None, 10, 100, true, 300);
+        assert!(output.restore_clipboard);
+        assert_eq!(output.restore_clipboard_delay_ms, 300);
+    }
+
+    #[test]
+    fn test_new_defaults_restore_clipboard_disabled() {
+        let output = PasteOutput::new(false, None, None, 10, 100, false, 200);
+        assert!(!output.restore_clipboard);
+        assert_eq!(output.restore_clipboard_delay_ms, 200);
+    }
+
+    #[test]
+    fn test_clipboard_content_debug_redacts_data() {
+        let content = ClipboardContent {
+            data: vec![1, 2, 3, 4, 5],
+            mime_type: "text/plain".to_string(),
+        };
+        let debug_str = format!("{:?}", content);
+        assert!(debug_str.contains("[5 bytes]"));
+        assert!(debug_str.contains("text/plain"));
+        assert!(!debug_str.contains("[1, 2, 3"));
     }
 }
